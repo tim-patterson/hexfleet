@@ -7,6 +7,10 @@ export { TableDO } from './table-do.js'
 export type Env = {
   TABLES: DurableObjectNamespace
   ALLOWED_ORIGINS: string
+  /** Override for tests; falls back to the protocol's 30s. */
+  TURN_MS?: string
+  /** Override for tests; falls back to the protocol's 24h. */
+  IDLE_MS?: string
 }
 
 export default {

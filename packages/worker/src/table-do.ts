@@ -1,9 +1,12 @@
 import {
   BOARD_RADIUS,
   MAX_SEATS,
+  MIN_SEATS,
   PALETTE,
   seatStats,
   shipStatuses,
+  TURN_MS,
+  validateFleet,
 } from '@hexfleet/shared'
 import type { ClientMsg, GameEvent, PublicSeat, ServerMsg, Snapshot } from '@hexfleet/shared'
 import type { Env } from './index.js'
@@ -85,9 +88,72 @@ export class TableDO {
     }
   }
 
-  /** Overridden in later tasks to handle lockFleet / startBattle / fire / rematch. */
-  protected async onGameMessage(ws: WebSocket, _seat: number, msg: ClientMsg): Promise<void> {
-    return this.fail(ws, 'unsupported', `Unsupported message: ${msg.type}`)
+  /** Overridden in later tasks to handle fire / rematch. */
+  protected async onGameMessage(ws: WebSocket, seat: number, msg: ClientMsg): Promise<void> {
+    switch (msg.type) {
+      case 'lockFleet':
+        return this.onLockFleet(ws, seat, msg.fleet)
+      case 'unlockFleet':
+        return this.onUnlockFleet(ws, seat)
+      case 'startBattle':
+        return this.onStartBattle(ws, seat)
+      default:
+        return this.fail(ws, 'unsupported', `Unsupported message: ${msg.type}`)
+    }
+  }
+
+  protected async onLockFleet(ws: WebSocket, seat: number, fleet: unknown): Promise<void> {
+    if (this.state.phase !== 'lobby') {
+      return this.fail(ws, 'wrongPhase', 'Fleets are locked once the battle starts.')
+    }
+    const res = validateFleet(fleet, BOARD_RADIUS)
+    if (!res.ok) return this.fail(ws, 'badFleet', res.reason)
+
+    this.state.fleets[seat] = res.fleet
+    const s = this.state.seats.find((x) => x.seat === seat)!
+    s.ready = true
+    await this.emit({ type: 'seatReady', seat })
+  }
+
+  protected async onUnlockFleet(ws: WebSocket, seat: number): Promise<void> {
+    if (this.state.phase !== 'lobby') {
+      return this.fail(ws, 'wrongPhase', 'Fleets are locked once the battle starts.')
+    }
+    const s = this.state.seats.find((x) => x.seat === seat)!
+    if (!s.ready) return
+    s.ready = false
+    await this.emit({ type: 'seatUnready', seat })
+  }
+
+  protected async onStartBattle(ws: WebSocket, seat: number): Promise<void> {
+    if (this.state.phase !== 'lobby') return this.fail(ws, 'wrongPhase', 'The battle is under way.')
+    if (seat !== this.state.hostSeat) {
+      return this.fail(ws, 'notHost', 'Only the captain who set the table can start it.')
+    }
+    const ready = this.state.seats.filter((s) => s.ready)
+    if (ready.length < MIN_SEATS) {
+      return this.fail(ws, 'notReady', `At least ${MIN_SEATS} captains must lock a fleet.`)
+    }
+
+    // Captains who never locked a fleet stay seated but sit this game out:
+    // dropping their (absent) fleet keeps isAlive false, so nextTurn skips them.
+    this.state.phase = 'battle'
+    this.state.turn = ready[0]!.seat
+    this.state.turnDeadline = this.turnDeadlineNow()
+    await this.emit({
+      type: 'battleStarted',
+      turn: this.state.turn,
+      turnDeadline: this.state.turnDeadline,
+    })
+  }
+
+  protected turnMs(): number {
+    const raw = Number(this.env.TURN_MS)
+    return Number.isFinite(raw) && raw > 0 ? raw : TURN_MS
+  }
+
+  protected turnDeadlineNow(): number {
+    return Date.now() + this.turnMs()
   }
 
   async webSocketClose(ws: WebSocket): Promise<void> {

@@ -1,5 +1,6 @@
 import { SELF } from 'cloudflare:test'
-import type { ClientMsg, ServerMsg } from '@hexfleet/shared'
+import { cellsFor } from '@hexfleet/shared'
+import type { ClientMsg, Fleet, ServerMsg } from '@hexfleet/shared'
 
 export const ORIGIN = 'http://localhost:5173'
 
@@ -73,4 +74,15 @@ export async function join(code: string, name: string) {
   const welcome = await c.until('welcome')
   const snapshot = await c.until('snapshot')
   return { client: c, seat: welcome.seat, token: welcome.token, snapshot }
+}
+
+/** Five disjoint E–W hulls, offset by `row` so different seats can differ. */
+export function legalFleet(row = 0): Fleet {
+  return {
+    carrier: cellsFor({ q: -2, r: row }, 0, 5),
+    cutter: cellsFor({ q: -2, r: row + 1 }, 0, 4),
+    trawler: cellsFor({ q: -2, r: row + 2 }, 0, 3),
+    skiff: cellsFor({ q: -2, r: row + 3 }, 0, 3),
+    tug: cellsFor({ q: -2, r: row + 4 }, 0, 2),
+  }
 }
