@@ -1,10 +1,16 @@
 import {
   BOARD_RADIUS,
+  inBounds,
+  isAlive,
+  key,
   MAX_SEATS,
   MIN_SEATS,
+  nextTurn,
   PALETTE,
+  resolveShot,
   seatStats,
   shipStatuses,
+  sunkBy,
   TURN_MS,
   validateFleet,
 } from '@hexfleet/shared'
@@ -97,6 +103,8 @@ export class TableDO {
         return this.onUnlockFleet(ws, seat)
       case 'startBattle':
         return this.onStartBattle(ws, seat)
+      case 'fire':
+        return this.onFire(ws, seat, { q: msg.q, r: msg.r })
       default:
         return this.fail(ws, 'unsupported', `Unsupported message: ${msg.type}`)
     }
@@ -142,6 +150,69 @@ export class TableDO {
     this.state.turnDeadline = this.turnDeadlineNow()
     await this.emit({
       type: 'battleStarted',
+      turn: this.state.turn,
+      turnDeadline: this.state.turnDeadline,
+    })
+  }
+
+  protected async onFire(ws: WebSocket, seat: number, hex: { q: number; r: number }): Promise<void> {
+    if (this.state.phase !== 'battle') return this.fail(ws, 'wrongPhase', 'No battle is running.')
+    if (this.state.turn !== seat) return this.fail(ws, 'notYourTurn', 'It is not your turn.')
+    if (!Number.isInteger(hex.q) || !Number.isInteger(hex.r) || !inBounds(hex, BOARD_RADIUS)) {
+      return this.fail(ws, 'offBoard', 'That hex is not on the sea.')
+    }
+    if (this.state.shots[key(hex.q, hex.r)]) {
+      return this.fail(ws, 'alreadyShot', 'That hex has already been fired on.')
+    }
+    await this.applyShot(seat, hex)
+  }
+
+  /** Resolve a shot, announce it, then either end the game or pass the turn. */
+  protected async applyShot(seat: number, hex: { q: number; r: number }): Promise<void> {
+    const hits = resolveShot(this.state.fleets, seat, hex)
+    this.state.shots[key(hex.q, hex.r)] = { by: seat, hits }
+    const sunk = sunkBy(this.state.fleets, this.state.shots, hex)
+
+    await this.emit({ type: 'shotFired', seat, q: hex.q, r: hex.r, hits, sunk })
+
+    if (await this.checkGameOver()) return
+    await this.advanceTurn()
+  }
+
+  /** Seats with a fleet still afloat. */
+  protected livingSeats(): number[] {
+    return this.state.seats
+      .filter((s) => isAlive(this.state.fleets[s.seat], this.state.shots, s.seat))
+      .map((s) => s.seat)
+  }
+
+  /** A seat can take a turn if its fleet is afloat and it has not gone adrift. */
+  protected playable(seat: number): boolean {
+    const s = this.state.seats.find((x) => x.seat === seat)
+    if (!s || s.adrift) return false
+    return isAlive(this.state.fleets[seat], this.state.shots, seat)
+  }
+
+  /** Ends the game when one fleet is left, or when everyone left is adrift. */
+  protected async checkGameOver(): Promise<boolean> {
+    const living = this.livingSeats()
+    const anyPlayable = living.some((s) => this.playable(s))
+    if (living.length > 1 && anyPlayable) return false
+
+    this.state.phase = 'results'
+    this.state.winner = living.length === 1 ? living[0]! : null
+    this.state.turnDeadline = 0
+    await this.emit({ type: 'gameEnded', winner: this.state.winner })
+    await this.ctx.storage.deleteAlarm()
+    return true
+  }
+
+  protected async advanceTurn(): Promise<void> {
+    const order = this.state.seats.map((s) => s.seat)
+    this.state.turn = nextTurn(this.state.turn, order, (s) => this.playable(s))
+    this.state.turnDeadline = this.turnDeadlineNow()
+    await this.emit({
+      type: 'turnAdvanced',
       turn: this.state.turn,
       turnDeadline: this.state.turnDeadline,
     })

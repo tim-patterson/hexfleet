@@ -1,6 +1,6 @@
 import { SELF } from 'cloudflare:test'
-import { cellsFor } from '@hexfleet/shared'
-import type { ClientMsg, Fleet, ServerMsg } from '@hexfleet/shared'
+import { boardCells, cellsFor, key } from '@hexfleet/shared'
+import type { ClientMsg, Fleet, Hex, ServerMsg } from '@hexfleet/shared'
 
 export const ORIGIN = 'http://localhost:5173'
 
@@ -85,4 +85,13 @@ export function legalFleet(row = 0): Fleet {
     skiff: cellsFor({ q: -2, r: row + 3 }, 0, 3),
     tug: cellsFor({ q: -2, r: row + 4 }, 0, 2),
   }
+}
+
+/** Board cells occupied by none of the given fleets, in board order. */
+export function openCells(radius: number, ...fleets: Fleet[]): Hex[] {
+  const taken = new Set<string>()
+  for (const f of fleets) {
+    for (const cs of Object.values(f)) for (const c of cs) taken.add(key(c.q, c.r))
+  }
+  return boardCells(radius).filter((c) => !taken.has(key(c.q, c.r)))
 }
