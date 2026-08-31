@@ -109,6 +109,8 @@ export class TableDO {
         return this.onStartBattle(ws, seat)
       case 'fire':
         return this.onFire(ws, seat, { q: msg.q, r: msg.r })
+      case 'rematch':
+        return this.onRematch(ws, seat)
       default:
         return this.fail(ws, 'unsupported', `Unsupported message: ${msg.type}`)
     }
@@ -157,6 +159,39 @@ export class TableDO {
       turn: this.state.turn,
       turnDeadline: this.state.turnDeadline,
     })
+    await this.scheduleAlarm()
+  }
+
+  /**
+   * Host-only, and only once a game has finished. Returns the table to
+   * `lobby`, keeping the code, seats, names and colours so captains do not
+   * have to rejoin — only the per-game state (fleets, shots, winner, and
+   * each seat's ready/adrift/timeouts) is cleared. Critically, `state.seats`
+   * is mutated in place (via `for...of`), never reordered, spliced, or
+   * rebuilt: `onStartBattle` picks the opening turn as `ready[0]!.seat`,
+   * which depends on `state.seats` staying in insertion order across a
+   * rematch.
+   */
+  protected async onRematch(ws: WebSocket, seat: number): Promise<void> {
+    if (this.state.phase !== 'results') {
+      return this.fail(ws, 'wrongPhase', 'The table has not finished its game.')
+    }
+    if (seat !== this.state.hostSeat) {
+      return this.fail(ws, 'notHost', 'Only the captain who set the table can restart it.')
+    }
+
+    this.state.phase = 'lobby'
+    this.state.fleets = {}
+    this.state.shots = {}
+    this.state.winner = null
+    this.state.turn = this.state.hostSeat
+    this.state.turnDeadline = 0
+    for (const s of this.state.seats) {
+      s.ready = false
+      s.adrift = false
+      s.timeouts = 0
+    }
+    await this.emit({ type: 'rematchStarted' })
     await this.scheduleAlarm()
   }
 
