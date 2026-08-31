@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { join, legalFleet } from './helpers.js'
+import { cellsFor } from '@hexfleet/shared'
+import type { Fleet } from '@hexfleet/shared'
+import { join, legalFleet, openCells } from './helpers.js'
 
-async function battle(code: string) {
+async function battle(code: string, fleets: [Fleet, Fleet] = [legalFleet(0), legalFleet(6)]) {
   const a = await join(code, 'Ada')
   const b = await join(code, 'Bo')
   await a.client.until('seatJoined')
-  a.client.send({ type: 'lockFleet', fleet: legalFleet(0) })
-  b.client.send({ type: 'lockFleet', fleet: legalFleet(6) })
+  a.client.send({ type: 'lockFleet', fleet: fleets[0] })
+  b.client.send({ type: 'lockFleet', fleet: fleets[1] })
   await b.client.until('seatReady')
   await b.client.until('seatReady')
   a.client.send({ type: 'startBattle' })
@@ -87,4 +89,54 @@ describe('idle eviction', () => {
     expect(snap.phase).not.toBe('lobby')
     expect(snap.seats).toHaveLength(2)
   }, 15_000)
+
+  it('forgets a finished table that nobody touches', async () => {
+    // Seat 1 gets a tiny corner fleet that seat 0 can sink hex by hex, same
+    // shape as the "game over" fleet in battle.test.ts.
+    const tiny: Fleet = {
+      carrier: cellsFor({ q: 0, r: -10 }, 0, 5),
+      cutter: cellsFor({ q: 0, r: -9 }, 0, 4),
+      trawler: cellsFor({ q: 0, r: -8 }, 0, 3),
+      skiff: cellsFor({ q: 0, r: -7 }, 0, 3),
+      tug: cellsFor({ q: 0, r: -6 }, 0, 2),
+    }
+    const fleets: [Fleet, Fleet] = [legalFleet(0), tiny]
+    const { a, b } = await battle('DUNE-07', fleets)
+
+    const targets = Object.values(tiny).flat()
+    // Bo's harmless replies land on open water only -- never on either
+    // fleet's hulls, never off the board.
+    const filler = openCells(10, ...fleets)
+    let fillerIdx = 0
+    let ended = false
+    for (const t of targets) {
+      a.client.send({ type: 'fire', q: t.q, r: t.r })
+      await a.client.until('shotFired')
+      const after = await a.client.next()
+      if (after.type === 'gameEnded') {
+        ended = true
+        break
+      }
+      const cell = filler[fillerIdx++]!
+      b.client.send({ type: 'fire', q: cell.q, r: cell.r })
+      await a.client.until('shotFired')
+      const after2 = await a.client.next()
+      if (after2.type === 'gameEnded') {
+        ended = true
+        break
+      }
+    }
+    expect(ended).toBe(true)
+
+    // The table is now in "results" with nobody sending it any more
+    // traffic. It must still be idle-evicted, exactly like a lobby that
+    // nobody touches: the old seat token stops working.
+    await new Promise((r) => setTimeout(r, 1500))
+
+    const { connect } = await import('./helpers.js')
+    const stale = await connect('DUNE-07')
+    stale.send({ type: 'hello', token: a.token })
+    const err = await stale.until('error')
+    expect(err.code).toBe('badToken')
+  }, 20_000)
 })

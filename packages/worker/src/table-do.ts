@@ -210,7 +210,15 @@ export class TableDO {
     this.state.winner = living.length === 1 ? living[0]! : null
     this.state.turnDeadline = 0
     await this.emit({ type: 'gameEnded', winner: this.state.winner })
-    await this.ctx.storage.deleteAlarm()
+    // Phase is already 'results' here, so scheduleAlarm() takes its
+    // non-battle path and arms lastActivityAt + idleMs() — the eviction
+    // deadline a finished table needs. Using deleteAlarm() here (as Task 8
+    // left it) would leave no alarm armed at all: onFire's winning-shot path
+    // never re-arms afterward, and onTurnExpired's auto-fire path only
+    // re-arms `if (phase === 'battle')`, which is false the instant this
+    // function flips the phase. A finished table that nobody revisits would
+    // then live forever.
+    await this.scheduleAlarm()
     return true
   }
 
