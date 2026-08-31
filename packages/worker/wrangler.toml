@@ -1,0 +1,14 @@
+name = "hexfleet-api"
+main = "src/index.ts"
+compatibility_date = "2025-04-01"
+
+[vars]
+ALLOWED_ORIGINS = "https://tim-patterson.github.io,http://localhost:5173,http://127.0.0.1:5173"
+
+[[durable_objects.bindings]]
+name = "TABLES"
+class_name = "TableDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["TableDO"]
