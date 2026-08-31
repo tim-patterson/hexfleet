@@ -119,6 +119,46 @@ describe('validateFleet', () => {
     fleet.tug = [{ q: 0.5, r: 0 }, { q: 1.5, r: 0 }]
     expect(validateFleet(fleet, 10)).toMatchObject({ ok: false })
   })
+
+  it('rejects NaN in coordinates', () => {
+    const fleet = legalFleet() as unknown as Record<string, unknown>
+    fleet.tug = [{ q: NaN, r: 0 }, { q: 1, r: 0 }]
+    expect(validateFleet(fleet, 10)).toMatchObject({ ok: false })
+  })
+
+  it('rejects Infinity in coordinates', () => {
+    const fleet = legalFleet() as unknown as Record<string, unknown>
+    fleet.tug = [{ q: Infinity, r: 0 }, { q: 1, r: 0 }]
+    expect(validateFleet(fleet, 10)).toMatchObject({ ok: false })
+  })
+
+  it('rejects a hull given as array elements instead of objects', () => {
+    const fleet = legalFleet() as unknown as Record<string, unknown>
+    fleet.tug = [[-2, 4], [-1, 4]]
+    expect(validateFleet(fleet, 10)).toMatchObject({ ok: false })
+  })
+
+  it('rejects a fleet passed as an array', () => {
+    expect(validateFleet([], 10)).toMatchObject({ ok: false })
+  })
+
+  it('rejects a fleet with an extra key', () => {
+    const fleet = legalFleet() as Record<string, unknown>
+    Object.defineProperty(fleet, '__proto__', {
+      value: cellsFor({ q: 0, r: 0 }, 0, 2),
+      enumerable: true,
+      configurable: true,
+    })
+    expect(validateFleet(fleet, 10)).toMatchObject({ ok: false })
+  })
+
+  it('rejects a fleet with a renamed ship id', () => {
+    const fleet = legalFleet() as Record<string, unknown>
+    const carrier = fleet.carrier
+    delete fleet.carrier
+    fleet.destroyer = carrier
+    expect(validateFleet(fleet, 10)).toMatchObject({ ok: false })
+  })
 })
 
 describe('fleetCells', () => {
