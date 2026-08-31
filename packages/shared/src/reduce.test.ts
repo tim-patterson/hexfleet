@@ -108,7 +108,7 @@ describe('applyEvent', () => {
     expect(next.seats[0]!.hitsDealt).toBe(0)
   })
 
-  it('applies a hit to every struck seat’s ship status', () => {
+  it("applies a hit to every struck seat's ship status", () => {
     const next = applyEvent(base({ phase: 'battle' }), {
       type: 'shotFired',
       seq: 2,
