@@ -54,6 +54,10 @@ describe('lockFleet', () => {
     a.client.send({ type: 'lockFleet', fleet: adaFleet })
     await b.client.until('seatReady')
 
+    a.client.send({ type: 'resync' })
+    const adaSnap = await a.client.until('snapshot')
+    expect(adaSnap.myFleet).toEqual(adaFleet)
+
     b.client.send({ type: 'resync' })
     const bobSnap = await b.client.until('snapshot')
 
