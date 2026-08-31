@@ -51,7 +51,12 @@ export function useTable(code: string | null, name: string): Table {
       const ws = new WebSocket(wsUrl(code))
       wsRef.current = ws
 
+      // Every listener below must check `closed`/`wsRef.current` before
+      // touching state: once `code` changes (or the effect unmounts), a
+      // message already in flight from THIS socket must not be allowed to
+      // land in a session that now belongs to a different table.
       ws.addEventListener('open', () => {
+        if (closed || wsRef.current !== ws) return
         attempt = 0
         setStatus('open')
         ws.send(
@@ -64,6 +69,7 @@ export function useTable(code: string | null, name: string): Table {
       })
 
       ws.addEventListener('message', (e) => {
+        if (closed || wsRef.current !== ws) return
         let msg: ServerMsg
         try {
           msg = JSON.parse(e.data as string) as ServerMsg
@@ -71,17 +77,11 @@ export function useTable(code: string | null, name: string): Table {
           return
         }
         if (msg.type === 'welcome') writeToken(code, msg.token)
-        setSession((prev) => {
-          const next = receive(prev, msg)
-          if (next.needsResync && !prev.needsResync && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'resync' } satisfies ClientMsg))
-          }
-          return next
-        })
+        setSession((prev) => receive(prev, msg))
       })
 
       const retry = () => {
-        wsRef.current = null
+        if (wsRef.current === ws) wsRef.current = null
         if (closed) return
         setStatus('closed')
         attempt += 1
@@ -101,6 +101,23 @@ export function useTable(code: string | null, name: string): Table {
       wsRef.current = null
     }
   }, [code])
+
+  // Fire `resync` exactly once per gap. This must NOT live inside the
+  // `setSession` updater above: React 18/19 StrictMode double-invokes state
+  // updaters in development to surface impurity, which would double-send a
+  // network call from a position that is contractually required to be pure.
+  // A ref (not state) tracks the previous value so this effect sees the
+  // false -> true transition without re-running on every render.
+  const wasResyncingRef = useRef(false)
+  useEffect(() => {
+    const wasResyncing = wasResyncingRef.current
+    wasResyncingRef.current = session.needsResync
+    if (!session.needsResync || wasResyncing) return
+    const ws = wsRef.current
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'resync' } satisfies ClientMsg))
+    }
+  }, [session.needsResync])
 
   const send = useCallback((m: ClientMsg) => {
     const ws = wsRef.current
