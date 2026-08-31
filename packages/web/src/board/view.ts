@@ -1,5 +1,5 @@
 import { boardCells, hexSize, key, layout, SHIPS } from '@hexfleet/shared'
-import type { Fleet, Hex, ShipId, ShotMap } from '@hexfleet/shared'
+import type { Fleet, Hex, Layout, ShipId, ShotMap } from '@hexfleet/shared'
 import { FAINT, MISS, PAPER, SEA, SEA_HI, SUNK } from '../theme.js'
 
 export type CellView = {
@@ -41,10 +41,26 @@ export type BoardInput = {
   sunkShips: Set<string>
 }
 
+// `boardCells` + `layout` recompute the full trig layout for every cell
+// (up to 331 of them) on every call. The board's geometry depends only on
+// `radius`, which never changes for the life of a table, so a hover-driven
+// re-render (every mouse move) would otherwise redo that work for nothing.
+// Cache it per radius instead of restructuring `buildBoard`'s signature.
+const geometryCache = new Map<number, { cells: Hex[]; g: Layout }>()
+
+function geometryFor(radius: number): { cells: Hex[]; g: Layout } {
+  let entry = geometryCache.get(radius)
+  if (!entry) {
+    const cells = boardCells(radius)
+    const g = layout(cells, hexSize(radius))
+    entry = { cells, g }
+    geometryCache.set(radius, entry)
+  }
+  return entry
+}
+
 export function buildBoard(input: BoardInput): BoardView {
-  const cells = boardCells(input.radius)
-  const size = hexSize(input.radius)
-  const g = layout(cells, size)
+  const { cells, g } = geometryFor(input.radius)
 
   const mine = new Map<string, ShipId>()
   if (input.myFleet) {

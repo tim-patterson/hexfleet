@@ -1,7 +1,8 @@
+import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { cellsFor, key, validateFleet } from '@hexfleet/shared'
 import type { Hex } from '@hexfleet/shared'
-import { computePreview, placeAt, rotate } from './useDeployment.js'
+import { computePreview, placeAt, rotate, useDeployment } from './useDeployment.js'
 import type { Placement } from './useDeployment.js'
 
 const R = 10
@@ -84,5 +85,31 @@ describe('rotate', () => {
     }
     const after = rotate(placement, { q: 0, r: 0 }, R)
     if (after) expect(validateFleet(after, R).ok).toBe(true)
+  })
+})
+
+describe('useDeployment', () => {
+  it('previews a placed hull re-dragged back over its own cells', () => {
+    const { result } = renderHook(() => useDeployment(R))
+
+    act(() => {
+      result.current.select('tug')
+    })
+    act(() => {
+      result.current.dropAt({ q: 0, r: 0 })
+    })
+    expect(result.current.placement.tug).toEqual(cellsFor({ q: 0, r: 0 }, 0, 2))
+
+    // Re-select the placed tug as the active ship and hover over one of its
+    // own cells: the drop would succeed here, so the preview must not be
+    // null, even though that cell is "occupied" by the tug itself.
+    act(() => {
+      result.current.select('tug')
+      result.current.setDragging('tug')
+      result.current.setHover({ q: 0, r: 0 })
+    })
+
+    expect(result.current.preview).not.toBeNull()
+    expect(result.current.preview!.ok).toBe(true)
   })
 })

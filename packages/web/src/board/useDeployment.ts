@@ -91,7 +91,7 @@ export function useDeployment(radius: number): Deployment {
   const active = dragging ?? selected
   const preview = useMemo(
     () =>
-      hover && !occupied(placement).has(key(hover.q, hover.r))
+      hover && !occupied(placement, active).has(key(hover.q, hover.r))
         ? computePreview(placement, hover, axis, active, radius)
         : null,
     [placement, hover, axis, active, radius],
