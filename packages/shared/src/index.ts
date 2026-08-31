@@ -1,3 +1,5 @@
 export * from './hex.js'
 export * from './ships.js'
 export * from './rules.js'
+export * from './protocol.js'
+export * from './reduce.js'
