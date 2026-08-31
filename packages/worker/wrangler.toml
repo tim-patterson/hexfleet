@@ -1,6 +1,6 @@
 name = "hexfleet-api"
 main = "src/index.ts"
-compatibility_date = "2025-04-01"
+compatibility_date = "2024-12-30"
 
 [vars]
 ALLOWED_ORIGINS = "https://tim-patterson.github.io,http://localhost:5173,http://127.0.0.1:5173"

@@ -46,7 +46,7 @@ async function mintCode(env: Env): Promise<string | null> {
   for (let i = 0; i < 10; i++) {
     const code = randomCode()
     const id = env.TABLES.idFromName(code)
-    const res = await env.TABLES.get(id).fetch(`https://do/claim?code=${code}`)
+    const res = await env.TABLES.get(id).fetch(`https://do/claim?code=${code}`, { method: 'POST' })
     const { claimed } = (await res.json()) as { claimed: boolean }
     if (claimed) return code
   }
