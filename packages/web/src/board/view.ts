@@ -46,13 +46,26 @@ export type BoardInput = {
 // `radius`, which never changes for the life of a table, so a hover-driven
 // re-render (every mouse move) would otherwise redo that work for nothing.
 // Cache it per radius instead of restructuring `buildBoard`'s signature.
-const geometryCache = new Map<number, { cells: Hex[]; g: Layout }>()
+//
+// The cached objects are shared by reference across every future call for
+// that radius, so they are deep-frozen before being cached: `buildBoard`
+// itself is pure and never mutates its inputs, but freezing keeps that
+// property true even if some future change forgot it, instead of quietly
+// corrupting every board for the rest of the process.
+const geometryCache = new Map<number, { cells: readonly Hex[]; g: Layout }>()
 
-function geometryFor(radius: number): { cells: Hex[]; g: Layout } {
+function geometryFor(radius: number): { cells: readonly Hex[]; g: Layout } {
   let entry = geometryCache.get(radius)
   if (!entry) {
     const cells = boardCells(radius)
+    for (const c of cells) Object.freeze(c)
+    Object.freeze(cells)
+
     const g = layout(cells, hexSize(radius))
+    for (const p of Object.values(g.pos)) Object.freeze(p)
+    Object.freeze(g.pos)
+    Object.freeze(g)
+
     entry = { cells, g }
     geometryCache.set(radius, entry)
   }

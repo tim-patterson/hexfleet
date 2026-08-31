@@ -22,7 +22,8 @@ export function Table({ code, name, onLeave }: { code: string; name: string; onL
   const deploy = useDeployment(radius)
   const [now, setNow] = useState(Date.now())
   const prevShots = useRef(0)
-  const wasResults = useRef(false)
+  const prevPhase = useRef<string | undefined>(undefined)
+  const seededFleetRef = useRef(false)
 
   const me = snap?.seats.find((s) => s.seat === snap.mySeat) ?? null
   const myColor = me?.color ?? ACCENT
@@ -48,13 +49,37 @@ export function Table({ code, name, onLeave }: { code: string; name: string; onL
     prevShots.current = count
   }, [snap])
 
+  // Only the phase's own *transition* into results should play the
+  // fanfare -- loading straight into an already-finished table (a
+  // reload, or joining a link after the fact) must stay silent, the
+  // same way the shot sound above skips the snapshot that first
+  // populates `shots`.
   useEffect(() => {
-    if (snap?.phase === 'results' && !wasResults.current) {
-      wasResults.current = true
+    const phase = snap?.phase
+    if (phase === 'results' && prevPhase.current !== undefined && prevPhase.current !== 'results') {
       sfx.play('win')
     }
-    if (snap?.phase !== 'results') wasResults.current = false
+    prevPhase.current = phase
   }, [snap?.phase])
+
+  // A captain who locked a fleet, then reloaded (seat restored from the
+  // token, `ready: true`, landing in waiting), then clicked "Change my
+  // placement" would otherwise see an empty yard: the server still holds
+  // their locked fleet in `snap.myFleet`, but `useDeployment` always
+  // mounts with an empty `placement`, and deploy mode never reads from
+  // the snapshot. Seed the local placement from the server-confirmed
+  // fleet the first time we see an empty yard in deploy mode; `reset`
+  // bypasses validation, so it must only ever be called with
+  // `snap.myFleet` (server-confirmed) or `null`, never local state. The
+  // ref guards this to run once per such transition, so it does not
+  // fight the player's own in-progress edits.
+  useEffect(() => {
+    if (isDeploy && deploy.placedCount === 0 && snap?.myFleet && !seededFleetRef.current) {
+      seededFleetRef.current = true
+      deploy.reset(snap.myFleet)
+    }
+    if (!isDeploy) seededFleetRef.current = false
+  }, [isDeploy, deploy.placedCount, snap?.myFleet])
 
   const view = useMemo(() => {
     if (!snap) return null
