@@ -6,7 +6,7 @@ import { Landing } from './screens/Landing.js'
 import { Name } from './screens/Name.js'
 import { Table } from './screens/Table.js'
 import { sfx } from './audio.js'
-import { BG, BODY, INK, seatColor } from './theme.js'
+import { BG, BODY, FAINT, INK } from './theme.js'
 
 type Route = { at: 'landing' } | { at: 'name'; code: string } | { at: 'table'; code: string; name: string }
 
@@ -49,7 +49,7 @@ export function App() {
       {route.at === 'name' && (
         <Name
           code={route.code}
-          color={seatColor(0)}
+          color={FAINT}
           seatLabel="Your colour is handed out with your seat"
           error={null}
           onSubmit={(name) => setRoute({ at: 'table', code: route.code, name })}

@@ -36,7 +36,10 @@ export function Name({ code, color, seatLabel, onSubmit, error }: Props) {
         </div>
       )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 17.6, padding: '17.6px 22px', borderRadius: 28, background: GREEN }}>
-        <div style={{ width: 46, height: 46, borderRadius: 999, flex: 'none', background: color, boxShadow: `0 0 0 4px ${BG}` }} />
+        <div
+          data-testid="seat-swatch"
+          style={{ width: 46, height: 46, borderRadius: 999, flex: 'none', background: SURFACE, border: `2px dashed ${color}`, boxShadow: `0 0 0 4px ${BG}` }}
+        />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: HEAD, fontSize: 17, color: GREEN_DARK }}>{seatLabel}</div>
           <div style={{ fontSize: 13, color: GREEN_TEXT }}>
