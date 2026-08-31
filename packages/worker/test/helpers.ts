@@ -5,6 +5,8 @@ export const ORIGIN = 'http://localhost:5173'
 
 export type Client = {
   send: (m: ClientMsg) => void
+  /** Send a raw text frame, bypassing JSON.stringify — for malformed-input tests. */
+  sendRaw: (raw: string) => void
   next: () => Promise<ServerMsg>
   until: <T extends ServerMsg['type']>(type: T) => Promise<Extract<ServerMsg, { type: T }>>
   untilMatching: <T extends ServerMsg['type']>(
@@ -44,6 +46,7 @@ export async function connect(code: string): Promise<Client> {
 
   return {
     send: (m) => ws.send(JSON.stringify(m)),
+    sendRaw: (raw) => ws.send(raw),
     next,
     async until(type) {
       for (let i = 0; i < 50; i++) {

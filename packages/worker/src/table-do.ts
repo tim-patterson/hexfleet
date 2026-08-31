@@ -56,12 +56,19 @@ export class TableDO {
   // ── socket lifecycle ────────────────────────────────────────────────────
 
   async webSocketMessage(ws: WebSocket, raw: string | ArrayBuffer): Promise<void> {
-    let msg: ClientMsg
+    let parsed: unknown
     try {
-      msg = JSON.parse(typeof raw === 'string' ? raw : new TextDecoder().decode(raw)) as ClientMsg
+      parsed = JSON.parse(typeof raw === 'string' ? raw : new TextDecoder().decode(raw))
     } catch {
       return this.fail(ws, 'badMessage', 'Could not parse that message.')
     }
+    // Attacker-controlled JSON: anything that parses but isn't a
+    // `{ type: string, ... }` shape must fail here, before we ever touch
+    // `msg.type` or hand fields like `name` to code that assumes a string.
+    if (typeof parsed !== 'object' || parsed === null || typeof (parsed as ClientMsg).type !== 'string') {
+      return this.fail(ws, 'badMessage', 'Could not parse that message.')
+    }
+    const msg = parsed as ClientMsg
 
     if (msg.type === 'hello') return this.onHello(ws, msg)
 
@@ -113,16 +120,26 @@ export class TableDO {
       if (!seat) return this.fail(ws, 'badToken', 'That seat token is not valid at this table.')
 
       ws.serializeAttachment({ seat: seat.seat } satisfies Attachment)
-      const wasAdrift = seat.adrift
       seat.connected = true
       seat.adrift = false
       seat.timeouts = 0
       this.send(ws, { type: 'welcome', token: msg.token, seat: seat.seat })
       await this.sendSnapshot(ws, seat.seat)
-      if (wasAdrift) await this.emit({ type: 'seatReturned', seat: seat.seat })
-      else await this.persist()
+      // Unconditional: an ordinary drop-and-reconnect (adrift never having
+      // been set) must still tell every other captain this seat is back —
+      // seatReturned's reducer sets both adrift:false and connected:true,
+      // so it's correct whether or not the seat had actually gone adrift.
+      await this.emit({ type: 'seatReturned', seat: seat.seat })
       return
     }
+
+    // Do the only await up front. From here to `this.state.seats.push(...)`
+    // there must be no `await` — a Durable Object's input gate defers
+    // delivery around storage operations, not around crypto awaits, so two
+    // `hello`s in the same batch could otherwise both read the same
+    // `seats.length` and be pushed as the same seat number.
+    const token = mintToken()
+    const tokenHash = await sha256hex(token)
 
     if (this.state.seats.length >= MAX_SEATS) {
       return this.fail(ws, 'tableFull', 'All six seats at this table are taken.')
@@ -132,11 +149,10 @@ export class TableDO {
     }
 
     const seatNo = this.state.seats.length
-    const token = mintToken()
     const seat: Seat = {
       seat: seatNo,
       name: cleanName(msg.name, seatNo),
-      tokenHash: await sha256hex(token),
+      tokenHash,
       ready: false,
       adrift: false,
       timeouts: 0,
@@ -147,7 +163,12 @@ export class TableDO {
 
     this.send(ws, { type: 'welcome', token, seat: seatNo })
     await this.sendSnapshot(ws, seatNo)
-    await this.emit({ type: 'seatJoined', seat: this.publicSeat(seat, seatNo) })
+    // Redacted for every viewer, including the joiner: a freshly allocated
+    // seat can never have a fleet yet, but this is the one broadcast that
+    // builds a PublicSeat with a real viewer, and Task 10's rematch returns
+    // the table to lobby — so build it as nobody's view on principle rather
+    // than relying on "no fleet exists yet" to keep it safe.
+    await this.emit({ type: 'seatJoined', seat: this.publicSeat(seat, -1) })
   }
 
   // ── outbound ────────────────────────────────────────────────────────────
@@ -230,7 +251,7 @@ export class TableDO {
   }
 }
 
-function cleanName(raw: string | undefined, seatNo: number): string {
-  const name = (raw ?? '').trim().replace(/\s+/g, ' ').slice(0, 24)
+function cleanName(raw: unknown, seatNo: number): string {
+  const name = (typeof raw === 'string' ? raw : '').trim().replace(/\s+/g, ' ').slice(0, 24)
   return name || `Captain ${seatNo + 1}`
 }
