@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_ds/organic-4a553621-9734-4ef8-8fab-625f3ade760d/styles.css">
+<script src="_ds/organic-4a553621-9734-4ef8-8fab-625f3ade760d/_ds_bundle.js"></script>
+<style>
+  body { margin:0; background:#f5ead8; }
+  a { color:#8c491a; text-underline-offset:3px; }
+  a:hover { color:#b2622d; }
+  *, *::before, *::after { box-sizing:border-box; }
+  :focus-visible { outline:2px solid #c67139; outline-offset:2px; }
+  ::selection { background:rgba(198,113,57,0.3); }
+  input { font-family:Figtree,system-ui,sans-serif; }
+  @keyframes bob { 0%,100% { transform:translateY(0); opacity:0.55 } 50% { transform:translateY(-5px); opacity:1 } }
+</style>
+</helmet>
+
+<div style="min-height:100vh; background:#f5ead8; color:#201e1d; font-family:Figtree,system-ui,sans-serif; font-size:15px; line-height:1.55; display:flex; flex-direction:column">
+
+  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:17.6px; padding:17.6px 26.4px">
+    <div style="display:flex; align-items:baseline; gap:13.2px">
+      <div onClick="{{ goLanding }}" style="font-family:Caprasimo,system-ui,sans-serif; font-size:25px; letter-spacing:-0.015em; cursor:pointer">Hexfleet</div>
+      <div style="font-size:13px; color:rgba(32,30,29,0.55)">Six captains, one sea, three axes</div>
+    </div>
+    <div style="display:flex; align-items:center; gap:13.2px; flex-wrap:wrap">
+      <div onClick="{{ toggleSound }}" style-hover="filter:brightness(0.96)" style="display:flex; align-items:center; gap:8.8px; padding:7px 17.6px; border-radius:999px; background:#ebddc5; cursor:pointer">
+        <div style="display:flex; align-items:flex-end; gap:2px; height:14px">
+          <div style="width:3px; height:6px; border-radius:999px; background:{{ soundFg }}"></div>
+          <div style="width:3px; height:11px; border-radius:999px; background:{{ soundFg }}"></div>
+          <div style="width:3px; height:14px; border-radius:999px; background:{{ soundFg }}"></div>
+        </div>
+        <div style="font-size:12.5px; color:{{ soundFg }}">{{ soundLabel }}</div>
+      </div>
+      <sc-if value="{{ inGame }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ copyLink }}" style-hover="filter:brightness(0.96)" style="display:flex; align-items:center; gap:8.8px; padding:6px 8px 6px 17.6px; border-radius:999px; background:#e1eecc; cursor:pointer" title="Copy a link to this table">
+          <div style="font-size:12.5px; color:#56633f">{{ copyHint }}</div>
+          <div style="font-family:Caprasimo,system-ui,sans-serif; font-size:15px; letter-spacing:0.06em; padding:2px 13.2px; border-radius:999px; background:#f9f4ed">{{ gameCode }}</div>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+
+  <sc-if value="{{ isLanding }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1; display:flex; flex-wrap:wrap; align-items:flex-start; gap:35.2px; padding:35.2px 26.4px 52px; max-width:1120px">
+      <div style="flex:1 1 380px; display:flex; flex-direction:column; gap:17.6px">
+        <div style="font-family:Caprasimo,system-ui,sans-serif; font-size:42px; line-height:1.12; letter-spacing:-0.015em; max-width:12ch">Take the sea from five other captains.</div>
+        <div style="font-size:16px; max-width:44ch; color:#201e1d">One shared hex sea. Hulls run along three axes instead of two, every captain flies a colour, and a single hex can hold more than one fleet.</div>
+        <div style="display:flex; gap:13.2px; align-items:center; margin-top:8.8px">
+          <sc-for list="{{ palette }}" as="c" hint-placeholder-count="6">
+            <div style="width:34px; height:34px; border-radius:999px; background:{{ c.color }}; animation:bob 2.4s ease-in-out infinite; animation-delay:{{ c.delay }}s"></div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="flex:1 1 340px; display:flex; flex-direction:column; gap:17.6px; max-width:420px">
+        <div style="padding:26.4px; border-radius:28px; background:#ebddc5; box-shadow:0 3px 10px rgba(46,43,37,0.16); display:flex; flex-direction:column; gap:13.2px">
+          <div style="font-family:Caprasimo,system-ui,sans-serif; font-size:25px">Join a table</div>
+          <div style="font-size:13.5px; color:rgba(32,30,29,0.55); margin-top:-8px">Ask whoever set the table for its code.</div>
+          <input value="{{ codeValue }}" onChange="{{ onCodeChange }}" placeholder="REEF-42" style="width:100%; padding:13.2px 22px; border-radius:999px; border:none; background:#f9f4ed; font-family:Caprasimo,system-ui,sans-serif; font-size:20px; letter-spacing:0.1em; color:#201e1d; text-transform:uppercase; box-shadow:{{ codeRing }}">
+          <sc-if value="{{ joinError }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; align-items:flex-start; gap:11px; padding:13.2px 17.6px; border-radius:16px; background:#ffe1d0">
+              <div style="width:10px; height:10px; border-radius:999px; background:#b2622d; flex:none; margin-top:6px"></div>
+              <div style="flex:1">
+                <div style="font-weight:600; color:#8c491a">{{ joinErrorTitle }}</div>
+                <div style="font-size:13.5px; color:#8c491a">{{ joinErrorBody }}</div>
+              </div>
+            </div>
+          </sc-if>
+          <div style="font-size:12.5px; color:rgba(32,30,29,0.55)">Codes look like REEF-42 — four letters, two digits.</div>
+          <div onClick="{{ joinGame }}" style-hover="filter:brightness(0.94)" style-active="filter:brightness(0.88)" style="text-align:center; padding:15px 0; border-radius:999px; background:{{ joinBg }}; color:{{ joinFg }}; font-family:Caprasimo,system-ui,sans-serif; font-size:16px; cursor:pointer">{{ joinLabel }}</div>
+        </div>
+
+        <div style="padding:26.4px; border-radius:28px; background:#e1eecc; display:flex; flex-direction:column; gap:13.2px">
+          <div style="font-family:Caprasimo,system-ui,sans-serif; font-size:25px; color:#3d472b">Set a new table</div>
+          <div style="font-size:13.5px; color:#56633f; margin-top:-8px">We hand you a code to pass around. Up to six captains.</div>
+          <div onClick="{{ newGame }}" style-hover="filter:brightness(0.94)" style-active="filter:brightness(0.88)" style="text-align:center; padding:15px 0; border-radius:999px; background:#7a8a5e; color:#f5ead8; font-family:Caprasimo,system-ui,sans-serif; font-size:16px; cursor:pointer">Launch a table</div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isName }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1; display:flex; flex-direction:column; gap:22px; padding:44px 26.4px 52px; max-width:560px">
+      <div style="display:flex; align-items:center; gap:13.2px; flex-wrap:wrap">
+        <div style="font-size:13px; color:rgba(32,30,29,0.55)">{{ nameKicker }}</div>
+        <div onClick="{{ copyLink }}" style-hover="filter:brightness(0.96)" style="display:flex; align-items:center; gap:11px; padding:4px 13.2px 4px 17.6px; border-radius:999px; background:#e1eecc; cursor:pointer">
+          <div style="font-family:Caprasimo,system-ui,sans-serif; font-size:16px; letter-spacing:0.08em">{{ gameCode }}</div>
+          <div style="font-size:12.5px; color:#56633f">{{ copyHint }}</div>
+        </div>
+      </div>
+      <div style="font-family:Caprasimo,system-ui,sans-serif; font-size:42px; line-height:1.12; letter-spacing:-0.015em">Who's at the helm?</div>
+      <input value="{{ nameValue }}" onChange="{{ onNameChange }}" placeholder="Your name" style="width:100%; padding:17.6px 26.4px; border-radius:999px; border:none; background:#ebddc5; font-size:20px; color:#201e1d; box-shadow:{{ nameRing }}">
+      <sc-if value="{{ nameError }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; align-items:center; gap:11px; padding:13.2px 17.6px; border-radius:16px; background:#ffe1d0; margin-top:-8px">
+          <div style="width:10px; height:10px; border-radius:999px; background:#b2622d; flex:none"></div>
+          <div style="font-size:14px; color:#8c491a">{{ nameError }}</div>
+        </div>
+      </sc-if>
+      <div style="display:flex; align-items:center; gap:17.6px; padding:17.6px 22px; border-radius:28px; background:#e1eecc">
+        <div style="width:46px; height:46px; border-radius:999px; flex:none; background:{{ myColor }}; box-shadow:0 0 0 4px #f5ead8"></div>
+        <div style="flex:1; min-width:0">
+          <div style="font-family:Caprasimo,system-ui,sans-serif; font-size:17px; color:#3d472b">{{ seatLabel }}</div>
+          <div style="font-size:13px; color:#56633f">Colours are handed out with the seat, so no two captains clash. Every hit you take shows up in yours.</div>
+        </div>
+      </div>
+      <div onClick="{{ enterDeploy }}" style-hover="filter:brightness(0.94)" style-active="filter:brightness(0.88)" style="align-self:flex-start; padding:15px 44px; border-radius:999px; background:{{ helmBg }}; color:{{ helmFg }}; font-family:Caprasimo,system-ui,sans-serif; font-size:16px; cursor:pointer">{{ helmLabel }}</div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ onBoardScreen }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1; display:flex; flex-wrap:wrap; align-items:flex-start; gap:26.4px; padding:8.8px 26.4px 35.2px">
+
+      <div style="width:270px; flex:1 1 240px; display:flex; flex-direction:column; gap:13.2px">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8.8px">
+          <div style="font-family:Caprasimo,system-ui,sans-serif; font-size:20px">{{ railTitle }}</div>
+          <sc-if value="{{ isBattle }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:4.4px 13.2px; border-radius:999px; background:{{ timerBg }}; color:{{ timerFg }}; font-weight:700; font-size:14px">{{ timerText }}</div>
+          </sc-if>
+        </div>
+        <sc-for list="{{ players }}" as="p" hint-placeholder-count="6">
+          <div style="display:flex; align-items:center; gap:13.2px; padding:11px 17.6px; border-radius:28px; background:{{ p.rowBg }}; box-shadow:{{ p.rowShadow }}; opacity:{{ p.opacity }}">
+            <div style="width:26px; height:26px; border-radius:999px; flex:none; background:{{ p.color }}; box-shadow:{{ p.ringShadow }}"></div>
+            <div style="flex:1; min-width:0">
+              <div style="font-weight:{{ p.weight }}; font-size:15px; color:{{ p.nameFg }}">{{ p.name }}</div>
+              <div style="font-size:12.5px; color:{{ p.subFg }}">{{ p.sub }}</div>
+            </div>
+            <div style="display:flex; gap:4px">
+              <sc-for list="{{ p.pips }}" as="d" hint-placeholder-count="5">
+                <div style="width:9px; height:9px; border-radius:999px; background:{{ d.color }}"></div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="flex:2 1 620px; display:flex; flex-direction:column; align-items:center; gap:17.6px">
+        <div style="width:100%; max-width:{{ panelW }}px; padding:26.4px; border-radius:28px; background:#e1eecc; display:flex; flex-direction:column; align-items:center; gap:17.6px; overflow-x:auto">
+          <div style="align-self:flex-start; display:flex; align-items:baseline; gap:13.2px; flex-wrap:wrap">
+            <div style="font-family:Caprasimo,system-ui,sans-serif; font-size:20px; color:#3d472b">{{ boardTitle }}</div>
+            <div style="font-size:13px; color:#56633f">{{ boardHint }}</div>
+          </div>
+
+          <div onDragOver="{{ onDragOver }}" style="position:relative; width:{{ boardW }}px; height:{{ boardH }}px; flex:none; opacity:{{ boardOpacity }}">
+            <sc-for list="{{ hulls }}" as="h" hint-placeholder-count="4">
+              <div style="position:absolute; left:{{ h.x }}px; top:{{ h.y }}px; width:{{ h.len }}px; height:{{ h.thick }}px; border-radius:999px; background:{{ h.color }}; transform:rotate({{ h.rot }}deg); transform-origin:left center; opacity:{{ h.opacity }}"></div>
+            </sc-for>
+            <sc-for list="{{ cells }}" as="c" hint-placeholder-count="300">
+              <div onClick="{{ c.onClick }}" onMouseEnter="{{ c.onEnter }}" onMouseLeave="{{ c.onLeave }}" onDragEnter="{{ c.onEnter }}" onDrop="{{ c.onDrop }}" onDragOver="{{ onDragOver }}" style="position:absolute; left:{{ c.x }}px; top:{{ c.y }}px; width:{{ c.d }}px; height:{{ c.d }}px; border-radius:999px; background:{{ c.bg }}; box-shadow:{{ c.shadow }}; cursor:{{ c.cursor }}; display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:1px; padding:3px; transition:background 120ms ease, transform 120ms ease; transform:scale({{ c.scale }})">
+                <sc-for list="{{ c.dots }}" as="d" hint-placeholder-count="0">
+                  <div style="width:{{ d.size }}px; height:{{ d.size }}px; border-radius:999px; background:{{ d.color }}"></div>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <div style="width:300px; flex:1 1 260px; display:flex; flex-direction:column; gap:13.2px">
+
+        <sc-if value="{{ isDeploy }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; flex-direction:column; gap:13.2px">
+            <div style="font-family:Caprasimo,system-ui,sans-serif; font-size:20px">Your yard</div>
+            <div style="font-size:13.5px; color:rgba(32,30,29,0.55); margin-top:-8px">Drag a hull onto the sea. Click a placed hull to spin it through the three axes.</div>
+
+            <div style="display:flex; gap:8.8px">
+              <div onClick="{{ setAxis0 }}" style="flex:1; padding:13.2px 0; border-radius:16px; background:{{ axis0Bg }}; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer">
+                <div style="width:36px; height:6px; border-radius:999px; background:{{ axis0Fg }}"></div>
+                <div style="font-size:11.5px; font-weight:600; color:{{ axis0Fg }}">E–W</div>
+              </div>
+              <div onClick="{{ setAxis1 }}" style="flex:1; padding:13.2px 0; border-radius:16px; background:{{ axis1Bg }}; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer">
+                <div style="width:36px; height:6px; border-radius:999px; background:{{ axis1Fg }}; transform:rotate(60deg)"></div>
+                <div style="font-size:11.5px; font-weight:600; color:{{ axis1Fg }}">NW–SE</div>
+              </div>
+              <div onClick="{{ setAxis2 }}" style="flex:1; padding:13.2px 0; border-radius:16px; background:{{ axis2Bg }}; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer">
+                <div style="width:36px; height:6px; border-radius:999px; background:{{ axis2Fg }}; transform:rotate(-60deg)"></div>
+                <div style="font-size:11.5px; font-weight:600; color:{{ axis2Fg }}">NE–SW</div>
+              </div>
+            </div>
+
+            <sc-for list="{{ tray }}" as="s" hint-placeholder-count="5">
+              <div draggable="true" onDragStart="{{ s.onDragStart }}" onDragEnd="{{ s.onDragEnd }}" onClick="{{ s.onSelect }}" style="display:flex; align-items:center; justify-content:space-between; gap:13.2px; padding:13.2px 17.6px; border-radius:28px; background:{{ s.bg }}; box-shadow:{{ s.shadow }}; cursor:grab; opacity:{{ s.opacity }}">
+                <div style="display:flex; flex-direction:column; gap:2px">
+                  <div style="font-family:Caprasimo,system-ui,sans-serif; font-size:16px; color:{{ s.fg }}">{{ s.name }}</div>
+                  <div style="font-size:12px; color:rgba(32,30,29,0.55)">{{ s.status }}</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:3px">
+                  <sc-for list="{{ s.pips }}" as="p" hint-placeholder-count="4">
+                    <div style="width:13px; height:13px; border-radius:999px; background:{{ p.color }}"></div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+
+            <div style="display:flex; gap:8.8px; margin-top:4.4px">
+              <div onClick="{{ randomize }}" style-hover="filter:brightness(0.94)" style-active="filter:brightness(0.88)" style="flex:1; text-align:center; padding:11px 0; border-radius:999px; background:#ebddc5; font-family:Caprasimo,system-ui,sans-serif; font-size:14px; cursor:pointer">Scatter</div>
+              <div onClick="{{ clearAll }}" style-hover="filter:brightness(0.94)" style-active="filter:brightness(0.88)" style="flex:1; text-align:center; padding:11px 0; border-radius:999px; background:#ebddc5; font-family:Caprasimo,system-ui,sans-serif; font-size:14px; cursor:pointer">Clear</div>
+            </div>
+            <div onClick="{{ confirmFleet }}" style-hover="filter:brightness(0.94)" style-active="filter:brightness(0.88)" style="text-align:center; padding:15px 0; border-radius:999px; background:{{ readyBg }}; color:{{ readyFg }}; font-family:Caprasimo,system-ui,sans-serif; font-size:16px; cursor:pointer">{{ readyLabel }}</div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isWaiting }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; flex-direction:column; gap:17.6px">
+            <div style="font-family:Caprasimo,system-ui,sans-serif; font-size:20px">Hold position</div>
+            <div style="padding:26.4px; border-radius:28px; background:#ebddc5; display:flex; flex-direction:column; gap:13.2px">
+              <div style="font-family:Caprasimo,system-ui,sans-serif; font-size:42px; line-height:1; color:#8c491a">{{ readyFraction }}</div>
+              <div style="font-size:14px; color:rgba(32,30,29,0.55)">captains have their hulls in the water. The first salvo fires when everyone is set.</div>
+              <div style="display:flex; gap:8px; margin-top:4.4px">
+                <sc-for list="{{ waitDots }}" as="d" hint-placeholder-count="6">
+                  <div style="width:14px; height:14px; border-radius:999px; background:{{ d.color }}; animation:bob 1.6s ease-in-out infinite; animation-delay:{{ d.delay }}s"></div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="font-size:13.5px; color:rgba(32,30,29,0.55)">Your fleet is locked. You can still watch the sea.</div>
+            <div onClick="{{ backToDeploy }}" style-hover="filter:brightness(0.94)" style-active="filter:brightness(0.88)" style="text-align:center; padding:11px 0; border-radius:999px; background:#ebddc5; font-family:Caprasimo,system-ui,sans-serif; font-size:14px; cursor:pointer">Change my placement</div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isBattle }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; flex-direction:column; gap:13.2px">
+            <div style="display:flex; align-items:center; gap:8.8px">
+              <div style="width:14px; height:14px; border-radius:999px; background:{{ myColor }}"></div>
+              <div style="font-family:Caprasimo,system-ui,sans-serif; font-size:20px">Your fleet</div>
+            </div>
+            <sc-for list="{{ myFleet }}" as="s" hint-placeholder-count="5">
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:13.2px; padding:13.2px 17.6px; border-radius:28px; background:#ebddc5; box-shadow:0 1px 2px rgba(46,43,37,0.14); opacity:{{ s.opacity }}">
+                <div>
+                  <div style="font-family:Caprasimo,system-ui,sans-serif; font-size:16px; text-decoration:{{ s.strike }}">{{ s.name }}</div>
+                  <div style="font-size:12px; color:{{ s.subFg }}">{{ s.status }}</div>
+                </div>
+                <div style="display:flex; gap:3px">
+                  <sc-for list="{{ s.pips }}" as="p" hint-placeholder-count="4">
+                    <div style="width:13px; height:13px; border-radius:999px; background:{{ p.color }}"></div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+            <div style="padding:17.6px; border-radius:28px; background:#ebddc5; display:flex; flex-direction:column; gap:6px">
+              <div style="font-size:12.5px; color:rgba(32,30,29,0.55)">This salvo</div>
+              <div style="font-family:Caprasimo,system-ui,sans-serif; font-size:18px; color:#8c491a">{{ salvoText }}</div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isResults }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1; display:flex; flex-direction:column; gap:26.4px; padding:26.4px 26.4px 52px; max-width:900px">
+
+      <div style="padding:35.2px; border-radius:28px; background:#ebddc5; box-shadow:0 12px 32px rgba(46,43,37,0.22); display:flex; align-items:center; gap:26.4px; flex-wrap:wrap">
+        <div style="width:96px; height:96px; border-radius:999px; flex:none; background:{{ winnerColor }}"></div>
+        <div style="flex:1 1 260px; display:flex; flex-direction:column; gap:8.8px">
+          <div onClick="{{ copyLink }}" style-hover="filter:brightness(0.96)" style="align-self:flex-start; display:flex; align-items:center; gap:11px; padding:4px 13.2px 4px 17.6px; border-radius:999px; background:#e1eecc; cursor:pointer">
+            <div style="font-size:13px; letter-spacing:0.08em; text-transform:uppercase; color:#3d472b">{{ resultKicker }}</div>
+            <div style="font-size:12.5px; color:#56633f">{{ copyHint }}</div>
+          </div>
+          <div style="font-family:Caprasimo,system-ui,sans-serif; font-size:42px; line-height:1.12; letter-spacing:-0.015em">{{ winnerLine }}</div>
+          <div style="font-size:15px; color:rgba(32,30,29,0.55)">{{ winnerSub }}</div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:17.6px; flex-wrap:wrap">
+        <sc-for list="{{ headline }}" as="h" hint-placeholder-count="3">
+          <div style="flex:1 1 180px; padding:22px; border-radius:28px; background:#e1eecc; display:flex; flex-direction:column; gap:4.4px">
+            <div style="font-family:Caprasimo,system-ui,sans-serif; font-size:32px; color:#3d472b">{{ h.value }}</div>
+            <div style="font-size:13px; color:#56633f">{{ h.label }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:8.8px">
+        <div style="font-family:Caprasimo,system-ui,sans-serif; font-size:25px">Final log</div>
+        <div style="display:flex; align-items:center; gap:13.2px; padding:0 17.6px 4.4px; font-size:12px; letter-spacing:0.06em; text-transform:uppercase; color:rgba(32,30,29,0.55)">
+          <div style="width:26px; flex:none"></div>
+          <div style="flex:1">Captain</div>
+          <div style="width:64px; text-align:right">Shots</div>
+          <div style="width:64px; text-align:right">Hits</div>
+          <div style="width:76px; text-align:right">Accuracy</div>
+          <div style="width:84px; text-align:right">Fleet left</div>
+        </div>
+        <sc-for list="{{ standings }}" as="row" hint-placeholder-count="6">
+          <div style="display:flex; align-items:center; gap:13.2px; padding:15px 17.6px; border-radius:28px; background:{{ row.bg }}; box-shadow:{{ row.shadow }}">
+            <div style="width:26px; height:26px; border-radius:999px; flex:none; background:{{ row.color }}"></div>
+            <div style="flex:1; min-width:0; display:flex; align-items:baseline; gap:8.8px">
+              <div style="font-family:Caprasimo,system-ui,sans-serif; font-size:17px">{{ row.name }}</div>
+              <div style="font-size:12.5px; color:rgba(32,30,29,0.55)">{{ row.note }}</div>
+            </div>
+            <div style="width:64px; text-align:right; font-size:15px">{{ row.shots }}</div>
+            <div style="width:64px; text-align:right; font-size:15px; color:#8c491a; font-weight:600">{{ row.hits }}</div>
+            <div style="width:76px; text-align:right; font-size:15px">{{ row.accuracy }}</div>
+            <div style="width:84px; text-align:right; font-size:15px">{{ row.left }}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex; gap:13.2px; flex-wrap:wrap">
+        <div onClick="{{ playAgain }}" style-hover="filter:brightness(0.94)" style-active="filter:brightness(0.88)" style="padding:15px 44px; border-radius:999px; background:#c67139; color:#f5ead8; font-family:Caprasimo,system-ui,sans-serif; font-size:16px; cursor:pointer">Play again</div>
+        <div onClick="{{ goLanding }}" style-hover="filter:brightness(0.94)" style-active="filter:brightness(0.88)" style="padding:15px 35.2px; border-radius:999px; background:#ebddc5; font-family:Caprasimo,system-ui,sans-serif; font-size:16px; cursor:pointer">Leave the table</div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;boardRadius&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:10,&quot;min&quot;:3,&quot;max&quot;:18,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Game&quot;},&quot;playerCount&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:6,&quot;min&quot;:2,&quot;max&quot;:6,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Game&quot;}}">
+const SHIPS = [
+  { id: 'carrier', name: 'Carrier', len: 5 },
+  { id: 'cutter', name: 'Cutter', len: 4 },
+  { id: 'trawler', name: 'Trawler', len: 3 },
+  { id: 'skiff', name: 'Skiff', len: 3 },
+  { id: 'tug', name: 'Tug', len: 2 }
+];
+const AXES = [[1, 0], [0, 1], [-1, 1]];
+const PALETTE = ['#c67139', '#7a8a5e', '#4f8a86', '#96517a', '#d9a441', '#5a6f9e'];
+const BOTS = ['Marisol', 'Okonkwo', 'Perrin', 'Halvard', 'Nadia'];
+const TABLE_WORDS = ['REEF', 'TIDE', 'KELP', 'DUNE', 'GULL', 'SALT'];
+const SEA = '#f5ead8', SEA_HI = '#ccdbb2', MISS = '#c0b6a5';
+const MUTED = 'rgba(32,30,29,0.55)', FAINT = 'rgba(32,30,29,0.18)';
+const key = (q, r) => q + ',' + r;
+const code = () => TABLE_WORDS[Math.floor(Math.random() * TABLE_WORDS.length)] + '-' + (10 + Math.floor(Math.random() * 49));
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const R = Math.max(3, Math.min(18, props.boardRadius ?? 10));
+    this.R = R;
+    this.size = R >= 13 ? 13 : R >= 9 ? 18 : R >= 6 ? 24 : 30;
+    this.cells = [];
+    for (let q = -R; q <= R; q++)
+      for (let r = Math.max(-R, -q - R); r <= Math.min(R, -q + R); r++) this.cells.push({ q, r });
+    this.valid = new Set(this.cells.map(c => key(c.q, c.r)));
+    this.n = Math.max(2, Math.min(6, props.playerCount ?? 6));
+    this.ids = Array.from({ length: this.n }, (_, i) => i);
+    this.pending = [];
+    const fleets = {};
+    this.ids.forEach(id => { fleets[id] = id === 0 ? this.randomFleet() : this.randomFleet(); });
+    this.state = {
+      screen: 'landing', gameCode: code(), codeValue: '', nameValue: '', joinError: null, nameError: null, muted: false,
+      fleets, selected: 'carrier', axis: 0, dragging: null, hover: null,
+      shots: {}, turn: 0, clock: 30, lobby: 1, ready: {},
+      salvo: 'Awaiting the first shot'
+    };
+  }
+
+  componentDidMount() {
+    this.timer = setInterval(() => {
+      if (this.state.screen !== 'battle') return;
+      if (this.state.clock <= 1) this.advance();
+      else this.setState(s => ({ clock: s.clock - 1 }));
+    }, 1000);
+  }
+  componentWillUnmount() { this.stopAll(); clearInterval(this.timer); }
+  stopAll() { this.pending.forEach(clearTimeout); this.pending = []; clearTimeout(this.bot); }
+  later(fn, ms) { this.pending.push(setTimeout(fn, ms)); }
+
+  roster() {
+    return this.ids.map(id => id === 0
+      ? { id: 0, name: this.state.nameValue.trim() || 'You', color: PALETTE[0], you: true }
+      : { id, name: BOTS[id - 1], color: PALETTE[id] });
+  }
+  who(id) { return this.roster().find(p => p.id === id); }
+
+  randomFleet() {
+    const used = new Set(); const out = {};
+    for (const s of SHIPS) {
+      for (let t = 0; t < 600; t++) {
+        const start = this.cells[Math.floor(Math.random() * this.cells.length)];
+        const ax = AXES[Math.floor(Math.random() * 3)];
+        const cs = [];
+        for (let i = 0; i < s.len; i++) cs.push({ q: start.q + ax[0] * i, r: start.r + ax[1] * i });
+        if (cs.every(c => this.valid.has(key(c.q, c.r)) && !used.has(key(c.q, c.r)))) {
+          cs.forEach(c => used.add(key(c.q, c.r)));
+          out[s.id] = cs; break;
+        }
+      }
+    }
+    return out;
+  }
+
+  audio() {
+    if (this.state.muted) return null;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    if (!this.ac) this.ac = new AC();
+    if (this.ac.state === 'suspended') this.ac.resume();
+    if (!this.noise) {
+      const len = this.ac.sampleRate * 1.2;
+      this.noise = this.ac.createBuffer(1, len, this.ac.sampleRate);
+      const d = this.noise.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    }
+    return this.ac;
+  }
+
+  sfx(kind) {
+    const ac = this.audio();
+    if (!ac) return;
+    const t = ac.currentTime;
+    const noise = (dur, type, f0, f1, vol) => {
+      const src = ac.createBufferSource(); src.buffer = this.noise;
+      const flt = ac.createBiquadFilter(); flt.type = type;
+      flt.frequency.setValueAtTime(f0, t);
+      flt.frequency.exponentialRampToValueAtTime(f1, t + dur);
+      const g = ac.createGain();
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+      src.connect(flt); flt.connect(g); g.connect(ac.destination);
+      src.start(t); src.stop(t + dur);
+    };
+    const tone = (wave, f0, f1, dur, vol, delay) => {
+      const o = ac.createOscillator(); o.type = wave;
+      const g = ac.createGain();
+      const s = t + (delay || 0);
+      o.frequency.setValueAtTime(f0, s);
+      o.frequency.exponentialRampToValueAtTime(f1, s + dur);
+      g.gain.setValueAtTime(0.0001, s);
+      g.gain.exponentialRampToValueAtTime(vol, s + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0008, s + dur);
+      o.connect(g); g.connect(ac.destination);
+      o.start(s); o.stop(s + dur + 0.02);
+    };
+    if (kind === 'splash') { noise(0.38, 'bandpass', 1500, 420, 0.22); tone('sine', 320, 150, 0.16, 0.05); }
+    else if (kind === 'boom') { tone('sine', 130, 38, 0.55, 0.5); noise(0.3, 'lowpass', 900, 200, 0.35); }
+    else if (kind === 'sunk') { tone('triangle', 220, 55, 1.1, 0.4); noise(0.9, 'lowpass', 600, 120, 0.3); }
+    else if (kind === 'place') { tone('sine', 260, 200, 0.09, 0.18); noise(0.08, 'bandpass', 900, 500, 0.08); }
+    else if (kind === 'win') { [0, 0.13, 0.26].forEach((d, i) => tone('triangle', [392, 523, 659][i], [392, 523, 659][i], 0.5, 0.22, d)); }
+  }
+
+  fleetMap(pid, skip) {
+    const m = {};
+    const f = this.state.fleets[pid] || {};
+    for (const s of SHIPS) {
+      if (s.id === skip) continue;
+      (f[s.id] || []).forEach(c => { m[key(c.q, c.r)] = s.id; });
+    }
+    return m;
+  }
+
+  preview() {
+    const { hover, axis, selected, dragging, screen } = this.state;
+    const id = dragging || selected;
+    if (!hover || !id || screen !== 'deploy') return null;
+    const s = SHIPS.find(x => x.id === id);
+    const cs = [];
+    for (let i = 0; i < s.len; i++) cs.push({ q: hover.q + AXES[axis][0] * i, r: hover.r + AXES[axis][1] * i });
+    const occ = this.fleetMap(0, id);
+    if (this.fleetMap(0)[key(hover.q, hover.r)]) return null;
+    return { id, cs, ok: cs.every(c => this.valid.has(key(c.q, c.r)) && !occ[key(c.q, c.r)]) };
+  }
+
+  drop() {
+    const p = this.preview();
+    if (!p || !p.ok) { this.setState({ hover: null, dragging: null }); return; }
+    const mine = Object.assign({}, this.state.fleets[0], { [p.id]: p.cs });
+    const next = SHIPS.find(s => !mine[s.id]);
+    this.setState({
+      fleets: Object.assign({}, this.state.fleets, { 0: mine }),
+      selected: next ? next.id : p.id, hover: null, dragging: null
+    });
+    this.sfx('place');
+  }
+
+  rotateAt(cell) {
+    const id = this.fleetMap(0)[key(cell.q, cell.r)];
+    if (!id) return;
+    const cur = this.state.fleets[0][id];
+    const s = SHIPS.find(x => x.id === id);
+    const free = this.fleetMap(0, id);
+    const mid = Math.floor((cur.length - 1) / 2);
+    const pivot = cur[mid];
+    const dq = cur.length > 1 ? cur[1].q - cur[0].q : 1;
+    const dr = cur.length > 1 ? cur[1].r - cur[0].r : 0;
+    const from = Math.max(0, AXES.findIndex(a => a[0] === dq && a[1] === dr));
+    for (let step = 1; step <= 3; step++) {
+      const axIdx = (from + step) % 3, ax = AXES[axIdx];
+      const cs = [];
+      for (let i = 0; i < s.len; i++) cs.push({ q: pivot.q + ax[0] * (i - mid), r: pivot.r + ax[1] * (i - mid) });
+      if (cs.every(c => this.valid.has(key(c.q, c.r)) && !free[key(c.q, c.r)])) {
+        const mine = Object.assign({}, this.state.fleets[0], { [id]: cs });
+        this.setState({ fleets: Object.assign({}, this.state.fleets, { 0: mine }), axis: axIdx, selected: id });
+        return;
+      }
+    }
+  }
+
+  startLobby() {
+    this.stopAll();
+    this.setState({ screen: 'deploy', lobby: 1, ready: {}, shots: {}, hover: null });
+    for (let i = 1; i < this.n; i++) this.later(() => this.setState({ lobby: i + 1 }), 1400 + i * 1600 + Math.random() * 700);
+  }
+
+  startWaiting() {
+    this.stopAll();
+    this.setState({ screen: 'waiting', lobby: this.n, ready: { 0: true }, hover: null });
+    this.ids.slice(1).forEach((id, i) => this.later(() => {
+      this.setState(s => ({ ready: Object.assign({}, s.ready, { [id]: true }) }), () => {
+        if (Object.keys(this.state.ready).length === this.n)
+          this.later(() => this.setState({ screen: 'battle', turn: 0, clock: 30, salvo: 'Awaiting the first shot' }), 1100);
+      });
+    }, 1000 + i * 900 + Math.random() * 900));
+  }
+
+  alive(pid) {
+    return SHIPS.some(s => {
+      const cs = (this.state.fleets[pid] || {})[s.id] || [];
+      return cs.some(c => !((this.state.shots[key(c.q, c.r)] || { hits: [] }).hits.indexOf(pid) >= 0));
+    });
+  }
+
+  fire(cell, shooter) {
+    const k = key(cell.q, cell.r);
+    if (this.state.shots[k] || this.state.screen !== 'battle') return;
+    const hits = this.ids.filter(id => id !== shooter && this.fleetMap(id)[k]);
+    const shots = Object.assign({}, this.state.shots, { [k]: { by: shooter, hits } });
+    const salvo = hits.length
+      ? this.who(shooter).name + ' struck ' + hits.map(h => this.who(h).name).join(' & ')
+      : this.who(shooter).name + ' hit open water';
+    this.setState({ shots, salvo }, () => {
+      const sunkNow = hits.some(pid => SHIPS.some(s => {
+        const cs = (this.state.fleets[pid] || {})[s.id] || [];
+        return cs.length && cs.some(c => key(c.q, c.r) === k) &&
+          cs.every(c => (this.state.shots[key(c.q, c.r)] || { hits: [] }).hits.indexOf(pid) >= 0);
+      }));
+      this.sfx(sunkNow ? 'sunk' : hits.length ? 'boom' : 'splash');
+      const standing = this.ids.filter(id => this.alive(id));
+      if (standing.length <= 1) { this.setState({ screen: 'results' }); this.sfx('win'); }
+      else this.advance();
+    });
+  }
+
+  advance() {
+    if (this.state.screen !== 'battle') return;
+    let turn = this.state.turn;
+    for (let i = 0; i < this.n; i++) {
+      turn = (turn + 1) % this.n;
+      if (this.alive(turn)) break;
+    }
+    this.setState({ turn, clock: 30 });
+    clearTimeout(this.bot);
+    if (turn !== 0) {
+      this.bot = setTimeout(() => {
+        const open = this.cells.filter(c => !this.state.shots[key(c.q, c.r)]);
+        if (open.length) this.fire(open[Math.floor(Math.random() * open.length)], turn);
+      }, 1100);
+    }
+  }
+
+  geometry() {
+    const size = this.size, d = size * Math.sqrt(3) - Math.max(3, size * 0.22);
+    let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+    const pos = {};
+    for (const c of this.cells) {
+      const cx = size * Math.sqrt(3) * (c.q + c.r / 2), cy = size * 1.5 * c.r;
+      pos[key(c.q, c.r)] = { cx, cy };
+      minX = Math.min(minX, cx); maxX = Math.max(maxX, cx);
+      minY = Math.min(minY, cy); maxY = Math.max(maxY, cy);
+    }
+    return { pos, d, minX: minX - d / 2, minY: minY - d / 2, W: maxX - minX + d, H: maxY - minY + d };
+  }
+
+  stats() {
+    const st = this.state;
+    const base = {};
+    this.ids.forEach(id => { base[id] = { shots: 0, hits: 0 }; });
+    Object.keys(st.shots).forEach(k => {
+      const s = st.shots[k];
+      base[s.by].shots += 1;
+      base[s.by].hits += s.hits.length;
+    });
+    return base;
+  }
+
+  renderVals() {
+    const st = this.state, g = this.geometry(), scr = st.screen;
+    const isDeploy = scr === 'deploy', isWaiting = scr === 'waiting', isBattle = scr === 'battle';
+    const onBoard = isDeploy || isWaiting || isBattle;
+    const roster = this.roster();
+    const me = roster[0];
+    const pv = this.preview();
+    const pk = new Set(pv ? pv.cs.map(c => key(c.q, c.r)) : []);
+    const mine = this.fleetMap(0);
+    const placedCount = SHIPS.filter(s => (st.fleets[0] || {})[s.id]).length;
+    const allPlaced = placedCount === SHIPS.length;
+    const myTurn = st.turn === 0;
+
+    const hulls = [];
+    SHIPS.forEach(s => {
+      const cs = (st.fleets[0] || {})[s.id];
+      if (!cs) return;
+      const sunk = cs.every(c => ((st.shots[key(c.q, c.r)] || { hits: [] }).hits.indexOf(0) >= 0));
+      for (let i = 0; i < cs.length - 1; i++) {
+        const a = g.pos[key(cs[i].q, cs[i].r)], b = g.pos[key(cs[i + 1].q, cs[i + 1].r)];
+        const dx = b.cx - a.cx, dy = b.cy - a.cy;
+        hulls.push({
+          x: a.cx - g.minX, y: a.cy - g.minY - g.d * 0.34,
+          len: Math.hypot(dx, dy), thick: g.d * 0.68,
+          rot: Math.atan2(dy, dx) * 180 / Math.PI,
+          color: sunk ? '#a19786' : me.color,
+          opacity: isDeploy ? 1 : 0.85
+        });
+      }
+    });
+
+    const cells = this.cells.map(c => {
+      const k = key(c.q, c.r);
+      const shot = st.shots[k];
+      const isMine = !!mine[k];
+      const inPv = pk.has(k);
+      let bg = SEA, shadow = 'inset 0 0 0 1px rgba(32,30,29,0.06)', dots = [];
+      if (isMine) { bg = me.color; shadow = 'none'; }
+      if (shot) {
+        if (shot.hits.length) {
+          bg = '#f9f4ed';
+          shadow = 'inset 0 0 0 2px #8c491a';
+          dots = shot.hits.map(h => ({ color: this.who(h).color, size: Math.max(4, Math.round(g.d * (shot.hits.length > 3 ? 0.22 : 0.3))) }));
+        } else {
+          bg = MISS; shadow = 'none';
+          dots = [{ color: 'rgba(32,30,29,0.28)', size: Math.max(3, Math.round(g.d * 0.22)) }];
+        }
+      }
+      if (inPv) { bg = pv.ok ? '#aebf92' : '#ffc6a5'; shadow = 'inset 0 0 0 2px ' + (pv.ok ? '#56633f' : '#b2622d'); }
+      const hovered = st.hover && st.hover.q === c.q && st.hover.r === c.r;
+      if (isBattle && hovered && !shot) bg = SEA_HI;
+      return {
+        x: g.pos[k].cx - g.minX - g.d / 2, y: g.pos[k].cy - g.minY - g.d / 2, d: g.d, bg, shadow, dots,
+        scale: hovered && !shot && !isWaiting ? 1.08 : 1,
+        cursor: isWaiting ? 'default' : isDeploy ? (isMine ? 'pointer' : 'copy') : shot ? 'default' : 'crosshair',
+        onEnter: () => { if (!isWaiting) this.setState({ hover: c }); },
+        onLeave: () => this.setState(s => (s.hover === c ? { hover: null } : null)),
+        onDrop: e => { e.preventDefault(); this.drop(); },
+        onClick: () => {
+          if (isDeploy) { if (mine[k]) this.rotateAt(c); else this.drop(); }
+          else if (isBattle && myTurn) this.fire(c, 0);
+        }
+      };
+    });
+
+    const tray = SHIPS.map(s => {
+      const done = !!(st.fleets[0] || {})[s.id];
+      const sel = st.selected === s.id;
+      return {
+        name: s.name,
+        status: done ? 'At sea · ' + s.len + ' hexes' : 'In the yard · ' + s.len + ' hexes',
+        bg: sel ? '#ffe1d0' : '#ebddc5',
+        shadow: sel ? '0 3px 10px rgba(46,43,37,0.16)' : 'none',
+        fg: '#201e1d',
+        opacity: done ? 0.62 : 1,
+        pips: Array.from({ length: s.len }, () => ({ color: done ? me.color : FAINT })),
+        onSelect: () => this.setState({ selected: s.id }),
+        onDragStart: () => this.setState({ dragging: s.id, selected: s.id }),
+        onDragEnd: () => this.setState({ dragging: null, hover: null })
+      };
+    });
+
+    const shipStatus = (pid, s) => {
+      const cs = (st.fleets[pid] || {})[s.id] || [];
+      const hits = cs.filter(c => (st.shots[key(c.q, c.r)] || { hits: [] }).hits.indexOf(pid) >= 0).length;
+      return { hits, sunk: cs.length > 0 && hits === cs.length };
+    };
+
+    const myFleet = SHIPS.map(s => {
+      const { hits, sunk } = shipStatus(0, s);
+      return {
+        name: s.name,
+        status: sunk ? 'Sunk' : hits ? hits + ' of ' + s.len + ' struck' : 'Afloat',
+        subFg: sunk ? '#a19786' : hits ? '#8c491a' : MUTED,
+        strike: sunk ? 'line-through' : 'none',
+        opacity: sunk ? 0.55 : 1,
+        pips: Array.from({ length: s.len }, (_, i) => ({ color: i < hits ? (sunk ? '#a19786' : '#8c491a') : me.color }))
+      };
+    });
+
+    const players = [];
+    roster.forEach(p => {
+      if (isDeploy && p.id >= st.lobby) return;
+      const states = SHIPS.map(s => shipStatus(p.id, s));
+      const afloat = states.filter(x => !x.sunk).length;
+      const cur = isBattle && st.turn === p.id;
+      let sub = afloat ? afloat + ' of ' + SHIPS.length + ' afloat' : 'Fleet destroyed';
+      let subFg = MUTED;
+      if (isDeploy) { sub = p.you ? (allPlaced ? 'Hulls in the water' : placedCount + ' of 5 placed') : 'Placing hulls…'; }
+      if (isWaiting) {
+        sub = st.ready[p.id] ? 'Ready' : 'Still placing…';
+        subFg = st.ready[p.id] ? '#56633f' : MUTED;
+      }
+      players.push({
+        color: p.color, name: p.you ? p.name + ' (you)' : p.name,
+        nameFg: !isDeploy && !isWaiting && !afloat ? '#a19786' : '#201e1d',
+        weight: cur || p.you ? 700 : 400,
+        sub, subFg, opacity: 1,
+        rowBg: cur ? '#f9f4ed' : isWaiting && st.ready[p.id] ? '#e1eecc' : 'transparent',
+        rowShadow: cur ? '0 3px 10px rgba(46,43,37,0.16)' : 'none',
+        ringShadow: cur ? '0 0 0 4px rgba(198,113,57,0.22)' : 'none',
+        pips: isDeploy ? [] : states.map(x => ({ color: x.sunk ? FAINT : p.color }))
+      });
+    });
+    if (isDeploy) {
+      for (let i = st.lobby; i < this.n; i++) players.push({
+        color: '#dcd3c4', name: 'Open seat', nameFg: '#a19786', weight: 400,
+        sub: 'Waiting for a captain', subFg: MUTED, opacity: 0.75,
+        rowBg: 'transparent', rowShadow: 'none', ringShadow: 'none', pips: []
+      });
+    }
+
+    const stats = this.stats();
+    const standings = roster.map(p => {
+      const states = SHIPS.map(s => shipStatus(p.id, s));
+      const left = states.filter(x => !x.sunk).length;
+      const s = stats[p.id];
+      return {
+        id: p.id, color: p.color, name: p.you ? p.name + ' (you)' : p.name,
+        shots: s.shots, hits: s.hits, left: left + ' / ' + SHIPS.length, leftN: left,
+        accuracy: s.shots ? Math.round((s.hits / s.shots) * 100) + '%' : '—',
+        note: left ? '' : 'sunk'
+      };
+    }).sort((a, b) => (b.leftN - a.leftN) || (b.hits - a.hits));
+    standings.forEach((r, i) => {
+      r.bg = i === 0 ? '#ffe1d0' : '#ebddc5';
+      r.shadow = i === 0 ? '0 3px 10px rgba(46,43,37,0.16)' : 'none';
+    });
+    const winner = standings[0] || { name: '—', color: '#dcd3c4', hits: 0 };
+    const totalShots = Object.keys(st.shots).length;
+    const totalHits = Object.keys(st.shots).reduce((n, k) => n + st.shots[k].hits.length, 0);
+
+    const axCol = i => st.axis === i ? { bg: '#ffe1d0', fg: '#8c491a' } : { bg: '#ebddc5', fg: MUTED };
+    const a0 = axCol(0), a1 = axCol(1), a2 = axCol(2);
+
+    return {
+      isLanding: scr === 'landing', isName: scr === 'name', isDeploy, isWaiting, isBattle,
+      isResults: scr === 'results', onBoardScreen: onBoard, inGame: onBoard || scr === 'results',
+      gameCode: st.gameCode, myColor: me.color,
+      soundLabel: st.muted ? 'Sound off' : 'Sound on',
+      soundFg: st.muted ? 'rgba(32,30,29,0.4)' : '#8c491a',
+      toggleSound: () => {
+        const muted = !this.state.muted;
+        this.setState({ muted });
+        if (!muted) this.sfx('place');
+      },
+      copyHint: st.copied ? 'Link copied' : 'Copy link',
+      copyLink: () => {
+        const url = location.origin + location.pathname + '?table=' + st.gameCode;
+        const done = () => {
+          this.setState({ copied: true });
+          clearTimeout(this.copyTimer);
+          this.copyTimer = setTimeout(() => this.setState({ copied: false }), 1800);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, done);
+        else done();
+      },
+      palette: PALETTE.map((c, i) => ({ color: c, delay: i * 0.18 })),
+      codeValue: st.codeValue,
+      codeRing: st.joinError ? 'inset 0 0 0 2px #b2622d' : 'none',
+      joinError: !!st.joinError,
+      joinErrorTitle: st.joinError === 'full' ? 'That table is full' : st.joinError === 'format' ? 'That code looks wrong' : 'No table with that code',
+      joinErrorBody: st.joinError === 'full'
+        ? 'All six seats at ' + st.codeValue.trim() + ' are taken. Ask for another code, or set your own table.'
+        : st.joinError === 'format'
+          ? 'Table codes are four letters, a dash, then two digits.'
+          : 'Nobody is sitting at ' + st.codeValue.trim() + '. It may have finished, or the code was mistyped.',
+      onCodeChange: e => this.setState({ codeValue: e.target.value.toUpperCase(), joinError: null }),
+      joinLabel: 'Join the table',
+      joinBg: '#c67139',
+      joinFg: '#f5ead8',
+      joinGame: () => {
+        const raw = st.codeValue.trim().toUpperCase();
+        const m = raw.match(/^([A-Z]{4})-(\d{2})$/);
+        if (!m) { this.setState({ joinError: 'format' }); return; }
+        if (TABLE_WORDS.indexOf(m[1]) < 0) { this.setState({ joinError: 'missing' }); return; }
+        if (Number(m[2]) >= 60) { this.setState({ joinError: 'full' }); return; }
+        this.setState({ screen: 'name', gameCode: raw, joinError: null });
+      },
+      newGame: () => this.setState({ screen: 'name', gameCode: code(), codeValue: '', joinError: null }),
+      nameKicker: 'You are joining table',
+      nameValue: st.nameValue,
+      nameRing: st.nameError ? 'inset 0 0 0 2px #b2622d' : 'none',
+      nameError: st.nameError,
+      onNameChange: e => this.setState({ nameValue: e.target.value, nameError: null }),
+      seatLabel: 'Your colour — seat ' + (me.id + 1) + ' of ' + this.n,
+      helmLabel: st.nameValue.trim() ? 'Take the helm' : 'Name yourself first',
+      helmBg: st.nameValue.trim() ? '#c67139' : '#ebddc5',
+      helmFg: st.nameValue.trim() ? '#f5ead8' : 'rgba(32,30,29,0.45)',
+      enterDeploy: () => {
+        const n = st.nameValue.trim();
+        if (!n) return;
+        if (BOTS.some(b => b.toLowerCase() === n.toLowerCase())) {
+          this.setState({ nameError: 'A captain at this table is already called ' + n + '. Pick another name.' });
+          return;
+        }
+        this.startLobby();
+      },
+
+      boardW: Math.ceil(g.W), boardH: Math.ceil(g.H), panelW: Math.ceil(g.W) + 54,
+      boardOpacity: isWaiting ? 0.72 : 1,
+      cells, hulls, tray, myFleet, players,
+      railTitle: isBattle ? 'Turn order' : isWaiting ? 'The table' : 'At the table',
+      boardTitle: isBattle ? 'The Sea · round ' + (Math.floor(totalShots / this.n) + 1) : 'The Sea',
+      boardHint: isDeploy
+        ? placedCount + ' of ' + SHIPS.length + ' hulls at sea — everyone shares these waters'
+        : isWaiting ? 'Locked in. Waiting on the rest of the table.'
+          : myTurn ? 'Pick a hex to fire on' : this.who(st.turn).name + ' is taking aim…',
+      salvoText: st.salvo,
+      timerText: '0:' + String(st.clock).padStart(2, '0'),
+      timerBg: myTurn ? (st.clock <= 10 ? '#ffc6a5' : '#ebddc5') : '#e1eecc',
+      timerFg: myTurn && st.clock <= 10 ? '#8c491a' : '#201e1d',
+      readyFraction: Object.keys(st.ready).length + ' / ' + this.n,
+      waitDots: roster.map((p, i) => ({ color: st.ready[p.id] ? p.color : FAINT, delay: i * 0.16 })),
+      backToDeploy: () => this.startLobby(),
+      axis0Bg: a0.bg, axis0Fg: a0.fg, axis1Bg: a1.bg, axis1Fg: a1.fg, axis2Bg: a2.bg, axis2Fg: a2.fg,
+      readyLabel: allPlaced ? 'Ready — lock my fleet' : 'Place all ' + SHIPS.length + ' hulls',
+      readyBg: allPlaced ? '#c67139' : '#ebddc5',
+      readyFg: allPlaced ? '#f5ead8' : 'rgba(32,30,29,0.45)',
+      onDragOver: e => e.preventDefault(),
+      setAxis0: () => this.setState({ axis: 0 }),
+      setAxis1: () => this.setState({ axis: 1 }),
+      setAxis2: () => this.setState({ axis: 2 }),
+      randomize: () => this.setState(s => ({ fleets: Object.assign({}, s.fleets, { 0: this.randomFleet() }) })),
+      clearAll: () => this.setState(s => ({ fleets: Object.assign({}, s.fleets, { 0: {} }), selected: 'carrier' })),
+      confirmFleet: () => { if (allPlaced) this.startWaiting(); },
+
+      headline: [
+        { value: totalShots, label: 'Shots fired across the table' },
+        { value: totalHits, label: 'Hulls struck' },
+        { value: totalShots ? Math.round((totalHits / totalShots) * 100) + '%' : '—', label: 'Table accuracy' }
+      ],
+      standings,
+      winnerColor: winner.color,
+      winnerLine: winner.id === 0 ? 'You hold the sea.' : winner.name + ' holds the sea.',
+      winnerSub: winner.hits + (winner.hits === 1 ? ' hit landed · ' : ' hits landed · ') + winner.left + ' of the fleet still afloat',
+      resultKicker: 'Table ' + st.gameCode + ' · ' + this.n + ' captains',
+      playAgain: () => {
+        const fleets = {};
+        this.ids.forEach(id => { fleets[id] = this.randomFleet(); });
+        this.stopAll();
+        this.setState({ gameCode: code(), fleets, shots: {}, turn: 0, clock: 30, selected: 'carrier', salvo: 'Awaiting the first shot' }, () => this.startLobby());
+      },
+      goLanding: () => { this.stopAll(); this.setState({ screen: 'landing', shots: {}, ready: {}, lobby: 1 }); }
+    };
+  }
+}
+
+</script>
+</body>
+</html>
