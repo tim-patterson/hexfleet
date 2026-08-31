@@ -1,5 +1,8 @@
 import {
+  ADRIFT_AFTER,
   BOARD_RADIUS,
+  boardCells,
+  IDLE_EVICT_MS,
   inBounds,
   isAlive,
   key,
@@ -85,6 +88,7 @@ export class TableDO {
     if (seat === null) return this.fail(ws, 'notSeated', 'Send hello first.')
 
     this.state.lastActivityAt = Date.now()
+    await this.scheduleAlarm()
 
     switch (msg.type) {
       case 'resync':
@@ -153,6 +157,7 @@ export class TableDO {
       turn: this.state.turn,
       turnDeadline: this.state.turnDeadline,
     })
+    await this.scheduleAlarm()
   }
 
   protected async onFire(ws: WebSocket, seat: number, hex: { q: number; r: number }): Promise<void> {
@@ -164,6 +169,8 @@ export class TableDO {
     if (this.state.shots[key(hex.q, hex.r)]) {
       return this.fail(ws, 'alreadyShot', 'That hex has already been fired on.')
     }
+    const me = this.state.seats.find((x) => x.seat === seat)
+    if (me) me.timeouts = 0
     await this.applyShot(seat, hex)
   }
 
@@ -216,6 +223,7 @@ export class TableDO {
       turn: this.state.turn,
       turnDeadline: this.state.turnDeadline,
     })
+    await this.scheduleAlarm()
   }
 
   protected turnMs(): number {
@@ -225,6 +233,70 @@ export class TableDO {
 
   protected turnDeadlineNow(): number {
     return Date.now() + this.turnMs()
+  }
+
+  protected idleMs(): number {
+    const raw = Number(this.env.IDLE_MS)
+    return Number.isFinite(raw) && raw > 0 ? raw : IDLE_EVICT_MS
+  }
+
+  /**
+   * A Durable Object has one alarm slot, so it always points at whichever
+   * deadline comes first; alarm() works out which job it was woken for.
+   */
+  protected async scheduleAlarm(): Promise<void> {
+    // A battling table is never idle-evicted (see alarm()'s eviction guard),
+    // so the turn deadline is the only clock that matters mid-battle. Mixing
+    // in the idle deadline here would let it land before the turn deadline
+    // whenever nobody has sent a message in a while (server-driven auto-fires
+    // do not bump lastActivityAt) — the DO would wake early, find neither
+    // job actionable, and re-arm the same already-past idle timestamp
+    // forever, so the turn would never actually expire.
+    const at =
+      this.state.phase === 'battle' && this.state.turnDeadline > 0
+        ? this.state.turnDeadline
+        : this.state.lastActivityAt + this.idleMs()
+    await this.ctx.storage.setAlarm(at)
+  }
+
+  async alarm(): Promise<void> {
+    const now = Date.now()
+
+    if (this.state.phase === 'battle' && this.state.turnDeadline > 0 && now >= this.state.turnDeadline - 50) {
+      await this.onTurnExpired()
+      if (this.state.phase === 'battle') await this.scheduleAlarm()
+      return
+    }
+
+    if (this.state.phase !== 'battle' && now >= this.state.lastActivityAt + this.idleMs()) {
+      await this.ctx.storage.deleteAll()
+      this.state = freshState('', Date.now())
+      for (const ws of this.ctx.getWebSockets()) ws.close(1001, 'table closed')
+      return
+    }
+
+    await this.scheduleAlarm()
+  }
+
+  protected async onTurnExpired(): Promise<void> {
+    const seat = this.state.turn
+    const s = this.state.seats.find((x) => x.seat === seat)
+    if (!s) return this.advanceTurn()
+
+    s.timeouts += 1
+    const goingAdrift = s.timeouts >= ADRIFT_AFTER && !s.adrift
+    if (goingAdrift) s.adrift = true
+
+    const hex = this.randomOpenHex()
+    if (goingAdrift) await this.emit({ type: 'seatAdrift', seat })
+    if (hex) await this.applyShot(seat, hex)
+    else await this.checkGameOver()
+  }
+
+  protected randomOpenHex(): { q: number; r: number } | null {
+    const open = boardCells(BOARD_RADIUS).filter((c) => !this.state.shots[key(c.q, c.r)])
+    if (open.length === 0) return null
+    return open[Math.floor(Math.random() * open.length)]!
   }
 
   async webSocketClose(ws: WebSocket): Promise<void> {
@@ -267,6 +339,7 @@ export class TableDO {
       // seatReturned's reducer sets both adrift:false and connected:true,
       // so it's correct whether or not the seat had actually gone adrift.
       await this.emit({ type: 'seatReturned', seat: seat.seat })
+      await this.scheduleAlarm()
       return
     }
 
@@ -306,6 +379,7 @@ export class TableDO {
     // the table to lobby — so build it as nobody's view on principle rather
     // than relying on "no fleet exists yet" to keep it safe.
     await this.emit({ type: 'seatJoined', seat: this.publicSeat(seat, -1) })
+    await this.scheduleAlarm()
   }
 
   // ── outbound ────────────────────────────────────────────────────────────
