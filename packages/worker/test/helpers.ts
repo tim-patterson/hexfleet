@@ -7,6 +7,10 @@ export type Client = {
   send: (m: ClientMsg) => void
   next: () => Promise<ServerMsg>
   until: <T extends ServerMsg['type']>(type: T) => Promise<Extract<ServerMsg, { type: T }>>
+  untilMatching: <T extends ServerMsg['type']>(
+    type: T,
+    pred: (m: Extract<ServerMsg, { type: T }>) => boolean,
+  ) => Promise<Extract<ServerMsg, { type: T }>>
   close: () => void
 }
 
@@ -47,6 +51,13 @@ export async function connect(code: string): Promise<Client> {
         if (m.type === type) return m as never
       }
       throw new Error(`never saw a ${type} message`)
+    },
+    async untilMatching(type, pred) {
+      for (let i = 0; i < 50; i++) {
+        const m = await next()
+        if (m.type === type && pred(m as never)) return m as never
+      }
+      throw new Error(`never saw a ${type} message matching the predicate`)
     },
     close: () => ws.close(),
   }

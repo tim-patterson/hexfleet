@@ -112,18 +112,15 @@ export class TableDO {
       const seat = this.state.seats.find((s) => s.tokenHash === hash)
       if (!seat) return this.fail(ws, 'badToken', 'That seat token is not valid at this table.')
 
+      ws.serializeAttachment({ seat: seat.seat } satisfies Attachment)
       const wasAdrift = seat.adrift
       seat.connected = true
       seat.adrift = false
       seat.timeouts = 0
       this.send(ws, { type: 'welcome', token: msg.token, seat: seat.seat })
       await this.sendSnapshot(ws, seat.seat)
-      // Attach after emitting: a captain rejoining doesn't need to be told
-      // about their own return via the broadcast — they already got it
-      // directly above — and this keeps them out of their own fan-out.
       if (wasAdrift) await this.emit({ type: 'seatReturned', seat: seat.seat })
       else await this.persist()
-      ws.serializeAttachment({ seat: seat.seat } satisfies Attachment)
       return
     }
 
@@ -146,14 +143,11 @@ export class TableDO {
       connected: true,
     }
     this.state.seats.push(seat)
+    ws.serializeAttachment({ seat: seatNo } satisfies Attachment)
 
     this.send(ws, { type: 'welcome', token, seat: seatNo })
     await this.sendSnapshot(ws, seatNo)
-    // Attach after emitting: a new captain doesn't need a seatJoined about
-    // themselves broadcast back to them — they already have their own
-    // snapshot — and this keeps them out of their own fan-out.
     await this.emit({ type: 'seatJoined', seat: this.publicSeat(seat, seatNo) })
-    ws.serializeAttachment({ seat: seatNo } satisfies Attachment)
   }
 
   // ── outbound ────────────────────────────────────────────────────────────
@@ -215,10 +209,7 @@ export class TableDO {
    */
   protected publicSeat(s: Seat, viewer: number): PublicSeat {
     const stats = seatStats(this.state.shots, s.seat)
-    const fleet = this.state.fleets[s.seat]
-    // Nothing to report before a fleet is locked in — and, crucially, no
-    // ship-type identifiers to leak either.
-    const truth = fleet ? shipStatuses(fleet, this.state.shots, s.seat) : []
+    const truth = shipStatuses(this.state.fleets[s.seat], this.state.shots, s.seat)
     const ships =
       s.seat === viewer ? truth : truth.map((sh) => ({ ...sh, hits: sh.sunk ? sh.len : 0 }))
     return {

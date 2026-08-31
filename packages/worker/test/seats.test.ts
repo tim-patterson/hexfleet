@@ -16,7 +16,11 @@ describe('hello', () => {
     const a = await join('REEF-02', 'Ada')
     const b = await join('REEF-02', 'Bo')
     expect(b.seat).toBe(1)
-    const joined = await a.client.until('seatJoined')
+    // Ada's own seatJoined (about herself) is queued ahead of Bo's — she
+    // receives it too, since emit() fans out to every seated socket
+    // including the actor, which is what keeps her sequence contiguous.
+    // Wait for the one that is actually about Bo.
+    const joined = await a.client.untilMatching('seatJoined', (m) => m.seat.seat === 1)
     expect(joined.seat).toMatchObject({ seat: 1, name: 'Bo', color: PALETTE[1] })
   })
 
@@ -75,11 +79,16 @@ describe('hello', () => {
 })
 
 describe('snapshot redaction', () => {
+  // No fleet can be locked yet at Task 6 — lockFleet arrives in Task 7 — so
+  // the only meaningful assertion here is that no fleet data is present at
+  // all. The real cross-captain redaction test (hits redacted to
+  // sunk/untouched for another seat's locked fleet) arrives with Task 7.
   it("never sends another captain's fleet", async () => {
     const a = await join('REEF-10', 'Ada')
     const b = await join('REEF-10', 'Bo')
     expect(a.snapshot.myFleet).toBeNull()
-    expect(JSON.stringify(b.snapshot)).not.toContain('"carrier"')
+    expect(b.snapshot.myFleet).toBeNull()
+    expect(JSON.stringify(b.snapshot)).not.toContain('"fleets"')
   })
 })
 
