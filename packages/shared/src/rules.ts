@@ -7,18 +7,20 @@ export type Shot = { by: number; hits: number[] }
 export type ShotMap = Record<HexKey, Shot>
 export type ShipStatus = { shipId: ShipId; len: number; hits: number; sunk: boolean }
 
-/** Which seats (never the shooter) have a hull on `hex`. */
-export function resolveShot(
-  fleets: Record<number, Fleet>,
-  shooter: number,
-  hex: Hex,
-): number[] {
+/**
+ * Which seats have a hull on `hex` -- the shooter included.
+ *
+ * A shot is resolved against the board, not against the captain who fired it,
+ * so firing on a hex your own hull sits on strikes it exactly as it strikes
+ * anyone else's. The shooter used to be excluded, but because a hex can only
+ * ever be fired once, that let a captain spend their turns shooting their own
+ * hulls to consume those cells and make the fleet unsinkable.
+ */
+export function resolveShot(fleets: Record<number, Fleet>, hex: Hex): number[] {
   const k = key(hex.q, hex.r)
   const out: number[] = []
   for (const [seatStr, fleet] of Object.entries(fleets)) {
-    const seat = Number(seatStr)
-    if (seat === shooter) continue
-    if (fleetCells(fleet).has(k)) out.push(seat)
+    if (fleetCells(fleet).has(k)) out.push(Number(seatStr))
   }
   return out.sort((a, b) => a - b)
 }

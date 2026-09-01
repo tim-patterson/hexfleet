@@ -29,28 +29,37 @@ function sink(shots: ShotMap, fleet: Fleet, shipId: keyof Fleet, seat: number, b
 describe('resolveShot', () => {
   it('returns an empty list for open water', () => {
     const fleets = { 0: fleetAt(0) }
-    expect(resolveShot(fleets, 1, { q: 9, r: 0 })).toEqual([])
+    expect(resolveShot(fleets, { q: 9, r: 0 })).toEqual([])
   })
 
   it('hits a captain whose hull is on the hex', () => {
     const fleets = { 0: fleetAt(0), 1: fleetAt(-6) }
-    expect(resolveShot(fleets, 1, { q: -2, r: 0 })).toEqual([0])
+    expect(resolveShot(fleets, { q: -2, r: 0 })).toEqual([0])
   })
 
   it('hits every captain sharing the hex at once', () => {
     // Three fleets deliberately overlapping on the same cell.
     const fleets = { 0: fleetAt(0), 1: fleetAt(0), 2: fleetAt(0) }
-    expect(resolveShot(fleets, 2, { q: -2, r: 0 }).sort()).toEqual([0, 1])
+    expect(resolveShot(fleets, { q: -2, r: 0 }).sort()).toEqual([0, 1, 2])
   })
 
-  it("never damages the shooter's own fleet", () => {
+  // A shot is resolved against the board, not against the shooter: firing on
+  // a hex your own hull sits on strikes it exactly as it strikes anyone
+  // else's. Shielding your own cells was the alternative, and it made a
+  // captain immortal.
+  it("damages the shooter's own fleet like anyone else's", () => {
     const fleets = { 0: fleetAt(0), 1: fleetAt(0) }
-    expect(resolveShot(fleets, 0, { q: -2, r: 0 })).toEqual([1])
+    expect(resolveShot(fleets, { q: -2, r: 0 }).sort()).toEqual([0, 1])
+  })
+
+  it('can strike the shooter alone when no one else is there', () => {
+    const fleets = { 0: fleetAt(0) }
+    expect(resolveShot(fleets, { q: -2, r: 0 })).toEqual([0])
   })
 
   it('ignores seats with no fleet', () => {
     const fleets: Record<number, Fleet> = { 0: fleetAt(0) }
-    expect(resolveShot(fleets, 5, { q: -2, r: 0 })).toEqual([0])
+    expect(resolveShot(fleets, { q: -2, r: 0 })).toEqual([0])
   })
 })
 

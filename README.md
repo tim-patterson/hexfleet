@@ -73,8 +73,8 @@ changes, update that list or tables will silently fail to connect.
 - Five hulls per captain: Carrier 5, Cutter 4, Trawler 3, Skiff 3, Tug 2, each
   along one of three axes.
 - Your own hulls may not overlap. Other captains' hulls may share your hexes.
-- One shot per turn, 30-second clock. A shot strikes every captain but the
-  shooter.
+- One shot per turn, 30-second clock. A shot strikes every captain with a hull
+  on that hex -- including the captain who fired it, so mind your own fleet.
 - Three consecutive clock expiries mark a captain adrift; they are skipped but
   their fleet stays a target, and reconnecting brings them back.
 - The table ends when one fleet is left afloat.

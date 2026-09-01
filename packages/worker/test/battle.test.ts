@@ -47,17 +47,16 @@ describe('fire', () => {
   it('strikes several captains sharing one hex', async () => {
     // Both fleets deliberately on the same rows.
     const { a } = await battle('TIDE-03', [legalFleet(0), legalFleet(0)])
-    a.client.send({ type: 'fire', q: -2, r: 0 })
+    a.client.send({ type: 'fire', ...legalFleet(0).carrier[0]! })
     const shot = await a.client.until('shotFired')
-    expect(shot.hits).toEqual([1])
+    expect(shot.hits).toEqual([0, 1])
   })
 
-  it('never damages the shooter', async () => {
+  it('damages the shooter too when they fire on their own hull', async () => {
     const { a } = await battle('TIDE-04', [legalFleet(0), legalFleet(0)])
-    a.client.send({ type: 'fire', q: -2, r: 4 }) // seat 0's own tug
+    a.client.send({ type: 'fire', ...legalFleet(0).tug[0]! })
     const shot = await a.client.until('shotFired')
-    expect(shot.hits).toEqual([1])
-    expect(shot.hits).not.toContain(0)
+    expect(shot.hits).toContain(0)
   })
 
   it('reports a sunk hull when its last cell is struck', async () => {
@@ -237,5 +236,36 @@ describe('secrecy', () => {
     )!
     expect(cutterAsSeenByOpponent.hits).toBe(0)
     expect(cutterAsSeenByOpponent.sunk).toBe(false)
+  })
+})
+
+describe('self-fire', () => {
+  // Self-fire used to deal no damage while still consuming the hex, which let
+  // a captain spend their turns shooting their own hulls to make the fleet
+  // unsinkable. Now it damages like any other shot, so it costs a hull rather
+  // than protecting one.
+  it('sinks the captain\'s own hull, so it cannot be used as a shield', async () => {
+    const mine = legalFleet(0)
+    const { a, b } = await battle('TIDE-20', [mine, FOE])
+
+    // Ada shoots both cells of her own tug, taking a Bo turn in between.
+    a.client.send({ type: 'fire', ...mine.tug[0]! })
+    const first = await a.client.until('shotFired')
+    expect(first.hits).toContain(0)
+    expect(first.sunk).toEqual([])
+    await a.client.until('turnAdvanced')
+
+    b.client.send({ type: 'fire', ...OPEN_WATER })
+    await a.client.until('turnAdvanced')
+
+    a.client.send({ type: 'fire', ...mine.tug[1]! })
+    const second = await a.client.until('shotFired')
+    expect(second.sunk).toEqual([{ seat: 0, shipId: 'tug' }])
+
+    // And Ada's own view agrees her tug is gone.
+    a.client.send({ type: 'resync' })
+    const snap = await a.client.until('snapshot')
+    const tug = snap.seats[0]!.ships.find((s) => s.shipId === 'tug')!
+    expect(tug.sunk).toBe(true)
   })
 })

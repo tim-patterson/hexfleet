@@ -231,7 +231,7 @@ export class TableDO {
 
   /** Resolve a shot, announce it, then either end the game or pass the turn. */
   protected async applyShot(seat: number, hex: { q: number; r: number }): Promise<void> {
-    const hits = resolveShot(this.state.fleets, seat, hex)
+    const hits = resolveShot(this.state.fleets, hex)
     this.state.shots[key(hex.q, hex.r)] = { by: seat, hits }
     const sunk = sunkBy(this.state.fleets, this.state.shots, hex)
 
