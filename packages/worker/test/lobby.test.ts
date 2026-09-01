@@ -83,6 +83,47 @@ describe('unlockFleet', () => {
     const ev = await a.client.until('seatUnready')
     expect(ev.seat).toBe(0)
   })
+
+  it('drops the retracted fleet, so the battle skips that captain entirely', async () => {
+    const a = await join('KELP-12', 'Ada')
+    const b = await join('KELP-12', 'Bo')
+    const c = await join('KELP-12', 'Cy')
+    await a.client.until('seatJoined')
+    await a.client.until('seatJoined')
+
+    const cyFleet = legalFleet(-6)
+    c.client.send({ type: 'lockFleet', fleet: cyFleet })
+    await c.client.until('seatReady')
+    c.client.send({ type: 'unlockFleet' })
+    await c.client.until('seatUnready')
+
+    c.client.send({ type: 'resync' })
+    const cySnap = await c.client.until('snapshot')
+    expect(cySnap.myFleet).toBeNull()
+
+    a.client.send({ type: 'lockFleet', fleet: legalFleet(0) })
+    b.client.send({ type: 'lockFleet', fleet: legalFleet(6) })
+    await b.client.until('seatReady')
+    await b.client.until('seatReady')
+
+    a.client.send({ type: 'startBattle' })
+    const started = await a.client.until('battleStarted')
+    // Cy unlocked her fleet before the battle started, so she sits this game
+    // out exactly like a captain who never locked one at all: play opens
+    // with seat 0 rather than ever landing on seat 2.
+    expect(started.turn).toBe(0)
+
+    // Firing at one of Cy's retracted hulls can never hit seat 2 -- her
+    // fleet is gone from the table entirely, not just marked unready.
+    const cyCell = cyFleet.tug[0]!
+    a.client.send({ type: 'fire', q: cyCell.q, r: cyCell.r })
+    const shot = await a.client.until('shotFired')
+    expect(shot.hits).not.toContain(2)
+
+    // Turn passes straight from seat 0 to seat 1, never pausing on seat 2.
+    const turn = await a.client.until('turnAdvanced')
+    expect(turn.turn).toBe(1)
+  })
 })
 
 describe('startBattle', () => {

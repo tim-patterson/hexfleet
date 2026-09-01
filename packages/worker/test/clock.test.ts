@@ -1,7 +1,11 @@
+import { env, SELF } from 'cloudflare:test'
 import { describe, expect, it } from 'vitest'
 import { cellsFor } from '@hexfleet/shared'
 import type { Fleet } from '@hexfleet/shared'
-import { join, legalFleet, openCells } from './helpers.js'
+import type { Env } from '../src/index.js'
+import { join, legalFleet, openCells, ORIGIN } from './helpers.js'
+
+const workerEnv = env as unknown as Env
 
 async function battle(code: string, fleets: [Fleet, Fleet] = [legalFleet(0), legalFleet(6)]) {
   const a = await join(code, 'Ada')
@@ -139,4 +143,50 @@ describe('idle eviction', () => {
     const err = await stale.until('error')
     expect(err.code).toBe('badToken')
   }, 20_000)
+
+  it('frees a code that was claimed but never joined', async () => {
+    // Mirrors mintCode()'s own way of reaching the DO's /claim route
+    // directly, bypassing POST /api/tables (which always picks a random
+    // code) so the test can claim and re-claim this exact code.
+    const code = 'DUNE-08'
+    const id = workerEnv.TABLES.idFromName(code)
+    const stub = workerEnv.TABLES.get(id)
+
+    const first = await stub.fetch(`https://do/claim?code=${code}`, { method: 'POST' })
+    expect(((await first.json()) as { claimed: boolean }).claimed).toBe(true)
+
+    // Nobody ever joins this table. Without an alarm armed at claim time the
+    // code would be reserved forever; claim()'s scheduleAlarm() call is what
+    // lets the idle clock reclaim it here.
+    await new Promise((r) => setTimeout(r, 1500))
+
+    const again = await stub.fetch(`https://do/claim?code=${code}`, { method: 'POST' })
+    expect(((await again.json()) as { claimed: boolean }).claimed).toBe(true)
+  }, 15_000)
+
+  it('frees a table whose socket connected but never said hello', async () => {
+    // A raw connection that never sends `hello` still has the /ws branch's
+    // persist() write `state.code` -- it must arm the idle alarm too, or the
+    // socket (and the code behind it) is orphaned forever. The alarm's own
+    // eviction path closes every open socket with 1001, so a close event
+    // arriving within the idle window is the discriminating signal: without
+    // the fix, no alarm is ever armed and this socket is never closed.
+    const res = await SELF.fetch('https://api.test/api/tables/DUNE-09/ws', {
+      headers: { Origin: ORIGIN, Upgrade: 'websocket' },
+    })
+    const ws = res.webSocket
+    if (!ws) throw new Error(`no websocket in response (status ${res.status})`)
+    ws.accept()
+
+    const closed = new Promise<number>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('socket was never closed')), 5000)
+      ws.addEventListener('close', (e) => {
+        clearTimeout(timer)
+        resolve(e.code)
+      })
+    })
+
+    const code = await closed
+    expect(code).toBe(1001)
+  }, 15_000)
 })

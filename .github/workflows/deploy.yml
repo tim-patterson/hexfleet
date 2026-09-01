@@ -29,6 +29,14 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Require VITE_API_BASE
+        run: |
+          if [ -z "$VITE_API_BASE" ]; then
+            echo "::error::VITE_API_BASE repository variable is unset or empty. Set it (Settings > Secrets and variables > Actions > Variables) to the deployed worker's URL before deploying, or the site will silently call the wrong API host."
+            exit 1
+          fi
+        env:
+          VITE_API_BASE: ${{ vars.VITE_API_BASE }}
       - run: npm run build -w @hexfleet/web
         env:
           VITE_API_BASE: ${{ vars.VITE_API_BASE }}

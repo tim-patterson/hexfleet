@@ -48,7 +48,13 @@ export class TableDO {
     if (url.pathname === '/ws') {
       if (!this.state.code) {
         this.state.code = code
+        // Bump lastActivityAt so scheduleAlarm() times the idle window from
+        // this write, not from whatever it was left at (e.g. an eviction's
+        // freshState() on a DO instance the runtime kept warm) -- otherwise
+        // the alarm it arms can already be in the past.
+        this.state.lastActivityAt = Date.now()
         await this.persist()
+        await this.scheduleAlarm()
       }
       const pair = new WebSocketPair()
       this.ctx.acceptWebSocket(pair[1])
@@ -61,7 +67,13 @@ export class TableDO {
   protected async claim(code: string): Promise<Response> {
     if (this.state.code) return Response.json({ claimed: false })
     this.state.code = code
+    // See the matching comment in fetch()'s /ws branch: without this, a
+    // re-claim of a code the runtime evicted but kept warm in memory would
+    // time its alarm from the stale eviction-time lastActivityAt instead of
+    // from now.
+    this.state.lastActivityAt = Date.now()
     await this.persist()
+    await this.scheduleAlarm()
     return Response.json({ claimed: true })
   }
 
@@ -136,6 +148,7 @@ export class TableDO {
     const s = this.state.seats.find((x) => x.seat === seat)!
     if (!s.ready) return
     s.ready = false
+    delete this.state.fleets[seat]
     await this.emit({ type: 'seatUnready', seat })
   }
 
