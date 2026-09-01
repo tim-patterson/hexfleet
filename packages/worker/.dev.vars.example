@@ -1,0 +1,7 @@
+# Local override for `wrangler dev`.
+#
+# Copy this file to `.dev.vars` (already gitignored) so the Worker accepts
+# WebSocket upgrades from the Vite dev server as well as the production
+# GitHub Pages origin. `wrangler dev` loads `.dev.vars` automatically and it
+# takes precedence over the `[vars]` block in wrangler.toml.
+ALLOWED_ORIGINS="https://tim-patterson.github.io,http://localhost:5173,http://127.0.0.1:5173"

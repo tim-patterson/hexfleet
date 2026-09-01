@@ -83,7 +83,7 @@ describe('Results', () => {
     expect(onLeave).toHaveBeenCalled()
   })
 
-  it('totals the table’s shots and hits', () => {
+  it("totals the table's shots and hits", () => {
     render(<Results snapshot={snapshot([seat(0, { shots: 6, hitsDealt: 2 }), seat(1, { shots: 4, hitsDealt: 3 })], 0)} isHost onRematch={() => {}} onLeave={() => {}} />)
     expect(screen.getByText('10')).toBeTruthy()
     expect(screen.getByText('5')).toBeTruthy()

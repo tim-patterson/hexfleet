@@ -3,10 +3,14 @@ main = "src/index.ts"
 compatibility_date = "2024-12-30"
 
 [vars]
-ALLOWED_ORIGINS = "https://tim-patterson.github.io,http://localhost:5173,http://127.0.0.1:5173"
+ALLOWED_ORIGINS = "https://tim-patterson.github.io"
 # TURN_MS and IDLE_MS are intentionally unset here so the Durable Object uses
 # the protocol defaults (30s turn clock, 24h idle eviction). Tests override
 # them through vitest.config.ts.
+#
+# For local `wrangler dev`, copy .dev.vars.example to .dev.vars (gitignored)
+# to widen ALLOWED_ORIGINS to include the Vite dev server. wrangler dev picks
+# up .dev.vars automatically and it overrides the [vars] above.
 
 [[durable_objects.bindings]]
 name = "TABLES"
