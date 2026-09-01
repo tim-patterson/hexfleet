@@ -1,13 +1,13 @@
 import { env, SELF } from 'cloudflare:test'
 import { describe, expect, it } from 'vitest'
-import { cellsFor } from '@hexfleet/shared'
+import { BOARD_RADIUS, cellsFor } from '@hexfleet/shared'
 import type { Fleet } from '@hexfleet/shared'
 import type { Env } from '../src/index.js'
 import { join, legalFleet, openCells, ORIGIN } from './helpers.js'
 
 const workerEnv = env as unknown as Env
 
-async function battle(code: string, fleets: [Fleet, Fleet] = [legalFleet(0), legalFleet(6)]) {
+async function battle(code: string, fleets: [Fleet, Fleet] = [legalFleet(0), legalFleet(-5)]) {
   const a = await join(code, 'Ada')
   const b = await join(code, 'Bo')
   await a.client.until('seatJoined')
@@ -50,7 +50,7 @@ describe('turn clock', () => {
     const b = await join('DUNE-04', 'Bo')
     await a.client.until('seatJoined')
     a.client.send({ type: 'lockFleet', fleet: legalFleet(0) })
-    b.client.send({ type: 'lockFleet', fleet: legalFleet(6) })
+    b.client.send({ type: 'lockFleet', fleet: legalFleet(-5) })
     await b.client.until('seatReady')
     await b.client.until('seatReady')
     a.client.send({ type: 'startBattle' })
@@ -98,11 +98,11 @@ describe('idle eviction', () => {
     // Seat 1 gets a tiny corner fleet that seat 0 can sink hex by hex, same
     // shape as the "game over" fleet in battle.test.ts.
     const tiny: Fleet = {
-      carrier: cellsFor({ q: 0, r: -10 }, 0, 5),
-      cutter: cellsFor({ q: 0, r: -9 }, 0, 4),
-      trawler: cellsFor({ q: 0, r: -8 }, 0, 3),
-      skiff: cellsFor({ q: 0, r: -7 }, 0, 3),
-      tug: cellsFor({ q: 0, r: -6 }, 0, 2),
+      carrier: cellsFor({ q: 0, r: -8 }, 0, 5),
+      cutter: cellsFor({ q: 0, r: -7 }, 0, 4),
+      trawler: cellsFor({ q: 0, r: -6 }, 0, 3),
+      skiff: cellsFor({ q: 0, r: -5 }, 0, 3),
+      tug: cellsFor({ q: 0, r: -4 }, 0, 2),
     }
     const fleets: [Fleet, Fleet] = [legalFleet(0), tiny]
     const { a, b } = await battle('DUNE-07', fleets)
@@ -110,7 +110,7 @@ describe('idle eviction', () => {
     const targets = Object.values(tiny).flat()
     // Bo's harmless replies land on open water only -- never on either
     // fleet's hulls, never off the board.
-    const filler = openCells(10, ...fleets)
+    const filler = openCells(BOARD_RADIUS, ...fleets)
     let fillerIdx = 0
     let ended = false
     for (const t of targets) {

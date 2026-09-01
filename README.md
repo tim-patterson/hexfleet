@@ -69,7 +69,7 @@ changes, update that list or tables will silently fail to connect.
 
 ## Rules
 
-- Hexagonal board, radius 10 (331 cells), axial coordinates.
+- Hexagonal board, radius 8 (217 cells), axial coordinates.
 - Five hulls per captain: Carrier 5, Cutter 4, Trawler 3, Skiff 3, Tug 2, each
   along one of three axes.
 - Your own hulls may not overlap. Other captains' hulls may share your hexes.

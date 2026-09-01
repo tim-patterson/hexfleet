@@ -1,5 +1,5 @@
 import { SELF } from 'cloudflare:test'
-import { boardCells, cellsFor, key } from '@hexfleet/shared'
+import { boardCells, BOARD_RADIUS, cellsFor, key, validateFleet } from '@hexfleet/shared'
 import type { ClientMsg, Fleet, Hex, ServerMsg } from '@hexfleet/shared'
 
 export const ORIGIN = 'http://localhost:5173'
@@ -78,13 +78,20 @@ export async function join(code: string, name: string) {
 
 /** Five disjoint E–W hulls, offset by `row` so different seats can differ. */
 export function legalFleet(row = 0): Fleet {
-  return {
+  const fleet: Fleet = {
     carrier: cellsFor({ q: -2, r: row }, 0, 5),
     cutter: cellsFor({ q: -2, r: row + 1 }, 0, 4),
     trawler: cellsFor({ q: -2, r: row + 2 }, 0, 3),
     skiff: cellsFor({ q: -2, r: row + 3 }, 0, 3),
     tug: cellsFor({ q: -2, r: row + 4 }, 0, 2),
   }
+  // Fail loudly and immediately if a fixture row no longer fits the board.
+  // Without this, an off-board fleet is simply rejected with `badFleet`, the
+  // test then waits for an event that never arrives, and the suite dies of
+  // twenty unrelated 3s timeouts with nothing pointing at the real cause.
+  const res = validateFleet(fleet, BOARD_RADIUS)
+  if (!res.ok) throw new Error(`legalFleet(${row}) is not legal at radius ${BOARD_RADIUS}: ${res.reason}`)
+  return fleet
 }
 
 /** Board cells occupied by none of the given fleets, in board order. */

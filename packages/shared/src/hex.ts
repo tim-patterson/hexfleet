@@ -8,7 +8,7 @@ export const AXES: readonly (readonly [number, number])[] = [
   [-1, 1],
 ] as const
 
-export const BOARD_RADIUS = 10
+export const BOARD_RADIUS = 8
 
 export function key(q: number, r: number): HexKey {
   return `${q},${r}`
@@ -36,7 +36,7 @@ export function boardCells(radius: number): Hex[] {
 /** Cell radius in px, chosen so the whole board stays on screen. */
 export function hexSize(radius: number): number {
   if (radius >= 13) return 13
-  if (radius >= 9) return 18
+  if (radius >= 8) return 18
   if (radius >= 6) return 24
   return 30
 }

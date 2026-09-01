@@ -22,6 +22,37 @@ describe('lockFleet', () => {
     expect(snap.myFleet).toEqual(legalFleet(0))
   })
 
+  // The owner must get their fleet back WITHOUT asking for it. A real client
+  // never sends `resync` after locking, so if the server only emits
+  // `seatReady` (which carries no fleet, deliberately -- it is broadcast to
+  // every captain), the owner's `myFleet` stays null from join time. Deploy
+  // mode hides that because it draws from local placement state, but the
+  // waiting and battle boards read `snap.myFleet` and would show the captain
+  // an empty sea where their own fleet should be.
+  it('pushes the locked fleet to its owner unprompted', async () => {
+    const a = await join('KELP-13', 'Ada')
+    a.client.send({ type: 'lockFleet', fleet: legalFleet(0) })
+    const snap = await a.client.until('snapshot')
+    expect(snap.myFleet).toEqual(legalFleet(0))
+  })
+
+  it('does not push a fleet snapshot to the other captains', async () => {
+    const a = await join('KELP-14', 'Ada')
+    const b = await join('KELP-14', 'Bo')
+    await a.client.until('seatJoined')
+
+    a.client.send({ type: 'lockFleet', fleet: legalFleet(0) })
+    // Bo sees the readiness event, and nothing carrying Ada's hulls.
+    const ready = await b.client.until('seatReady')
+    expect(ready.seat).toBe(0)
+    b.client.send({ type: 'resync' })
+    const bobSnap = await b.client.until('snapshot')
+    expect(bobSnap.myFleet).toBeNull()
+    for (const cell of Object.values(legalFleet(0)).flat()) {
+      expect(JSON.stringify(bobSnap)).not.toContain(`{"q":${cell.q},"r":${cell.r}}`)
+    }
+  })
+
   it('rejects an illegal fleet and leaves the seat unready', async () => {
     const a = await join('KELP-03', 'Ada')
     const bad = legalFleet(0)
@@ -102,7 +133,7 @@ describe('unlockFleet', () => {
     expect(cySnap.myFleet).toBeNull()
 
     a.client.send({ type: 'lockFleet', fleet: legalFleet(0) })
-    b.client.send({ type: 'lockFleet', fleet: legalFleet(6) })
+    b.client.send({ type: 'lockFleet', fleet: legalFleet(-5) })
     await b.client.until('seatReady')
     await b.client.until('seatReady')
 
@@ -132,7 +163,7 @@ describe('startBattle', () => {
     const b = await join('KELP-06', 'Bo')
     await a.client.until('seatJoined')
     a.client.send({ type: 'lockFleet', fleet: legalFleet(0) })
-    b.client.send({ type: 'lockFleet', fleet: legalFleet(6) })
+    b.client.send({ type: 'lockFleet', fleet: legalFleet(-5) })
     await b.client.until('seatReady')
     await b.client.until('seatReady')
 
@@ -147,7 +178,7 @@ describe('startBattle', () => {
     const b = await join('KELP-07', 'Bo')
     await a.client.until('seatJoined')
     a.client.send({ type: 'lockFleet', fleet: legalFleet(0) })
-    b.client.send({ type: 'lockFleet', fleet: legalFleet(6) })
+    b.client.send({ type: 'lockFleet', fleet: legalFleet(-5) })
     await b.client.until('seatReady')
     await b.client.until('seatReady')
 
@@ -173,7 +204,7 @@ describe('startBattle', () => {
     const b = await join('KELP-09', 'Bo')
     await a.client.until('seatJoined')
     a.client.send({ type: 'lockFleet', fleet: legalFleet(0) })
-    b.client.send({ type: 'lockFleet', fleet: legalFleet(6) })
+    b.client.send({ type: 'lockFleet', fleet: legalFleet(-5) })
     await b.client.until('seatReady')
     await b.client.until('seatReady')
     a.client.send({ type: 'startBattle' })
@@ -190,7 +221,7 @@ describe('startBattle', () => {
     const c = await join('KELP-10', 'Cy')
     await a.client.until('seatJoined')
     b.client.send({ type: 'lockFleet', fleet: legalFleet(0) })
-    c.client.send({ type: 'lockFleet', fleet: legalFleet(6) })
+    c.client.send({ type: 'lockFleet', fleet: legalFleet(-5) })
     await c.client.until('seatReady')
     await c.client.until('seatReady')
 

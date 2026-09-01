@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { cellsFor } from '@hexfleet/shared'
+import { BOARD_RADIUS, cellsFor } from '@hexfleet/shared'
 import type { Fleet } from '@hexfleet/shared'
 import { join, legalFleet, openCells } from './helpers.js'
 
 const tiny: Fleet = {
-  carrier: cellsFor({ q: 0, r: -10 }, 0, 5),
-  cutter: cellsFor({ q: 0, r: -9 }, 0, 4),
-  trawler: cellsFor({ q: 0, r: -8 }, 0, 3),
-  skiff: cellsFor({ q: 0, r: -7 }, 0, 3),
-  tug: cellsFor({ q: 0, r: -6 }, 0, 2),
+  carrier: cellsFor({ q: 0, r: -8 }, 0, 5),
+  cutter: cellsFor({ q: 0, r: -7 }, 0, 4),
+  trawler: cellsFor({ q: 0, r: -6 }, 0, 3),
+  skiff: cellsFor({ q: 0, r: -5 }, 0, 3),
+  tug: cellsFor({ q: 0, r: -4 }, 0, 2),
 }
 
 /**
@@ -59,7 +59,7 @@ async function finished(code: string) {
   }
 
   const targets = Object.values(tiny).flat()
-  const filler = openCells(10, ...fleets)
+  const filler = openCells(BOARD_RADIUS, ...fleets)
   let fillerIdx = 0
   for (const t of targets) {
     a.client.send({ type: 'fire', q: t.q, r: t.r })
@@ -100,7 +100,7 @@ describe('rematch', () => {
     await b.client.until('rematchStarted')
 
     a.client.send({ type: 'lockFleet', fleet: legalFleet(0) })
-    b.client.send({ type: 'lockFleet', fleet: legalFleet(6) })
+    b.client.send({ type: 'lockFleet', fleet: legalFleet(-5) })
     await b.client.until('seatReady')
     await b.client.until('seatReady')
     a.client.send({ type: 'startBattle' })
@@ -120,7 +120,7 @@ describe('rematch', () => {
     const b = await join('GULL-04', 'Bo')
     await a.client.until('seatJoined')
     a.client.send({ type: 'lockFleet', fleet: legalFleet(0) })
-    b.client.send({ type: 'lockFleet', fleet: legalFleet(6) })
+    b.client.send({ type: 'lockFleet', fleet: legalFleet(-5) })
     await b.client.until('seatReady')
     await b.client.until('seatReady')
     a.client.send({ type: 'startBattle' })

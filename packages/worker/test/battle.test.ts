@@ -1,10 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { cellsFor, key } from '@hexfleet/shared'
+import { BOARD_RADIUS, cellsFor, key } from '@hexfleet/shared'
 import type { Fleet } from '@hexfleet/shared'
 import { join, legalFleet, openCells } from './helpers.js'
 
+/**
+ * A hex on the eastern rim that neither fixture fleet occupies (both sit at
+ * q -2..2), derived from the radius so it follows the board if it changes.
+ */
+const OPEN_WATER = { q: BOARD_RADIUS, r: 0 }
+
+/** Seat 1's fleet in the default battle fixture. */
+const FOE = legalFleet(-5)
+
 /** Two captains locked in and the battle running, seat 0 to play. */
-async function battle(code: string, fleets: [Fleet, Fleet] = [legalFleet(0), legalFleet(6)]) {
+async function battle(code: string, fleets: [Fleet, Fleet] = [legalFleet(0), legalFleet(-5)]) {
   const a = await join(code, 'Ada')
   const b = await join(code, 'Bo')
   await a.client.until('seatJoined')
@@ -21,17 +30,16 @@ async function battle(code: string, fleets: [Fleet, Fleet] = [legalFleet(0), leg
 describe('fire', () => {
   it('records a miss and passes the turn', async () => {
     const { a, b } = await battle('TIDE-01')
-    a.client.send({ type: 'fire', q: 9, r: 0 })
+    a.client.send({ type: 'fire', ...OPEN_WATER })
     const shot = await b.client.until('shotFired')
-    expect(shot).toMatchObject({ seat: 0, q: 9, r: 0, hits: [], sunk: [] })
+    expect(shot).toMatchObject({ seat: 0, ...OPEN_WATER, hits: [], sunk: [] })
     const turn = await b.client.until('turnAdvanced')
     expect(turn.turn).toBe(1)
   })
 
   it('strikes a captain whose hull is on the hex', async () => {
     const { a, b } = await battle('TIDE-02')
-    // Seat 1's carrier occupies (-2,6)..(2,6).
-    a.client.send({ type: 'fire', q: -2, r: 6 })
+    a.client.send({ type: 'fire', ...FOE.carrier[0]! })
     const shot = await b.client.until('shotFired')
     expect(shot.hits).toEqual([1])
   })
@@ -54,29 +62,29 @@ describe('fire', () => {
 
   it('reports a sunk hull when its last cell is struck', async () => {
     const { a, b } = await battle('TIDE-05')
-    // Seat 1's tug is at (-2,10) and (-1,10).
-    a.client.send({ type: 'fire', q: -2, r: 10 })
+    // Strike both cells of seat 1's two-cell tug to sink it.
+    a.client.send({ type: 'fire', ...FOE.tug[0]! })
     await a.client.until('shotFired')
     await a.client.until('turnAdvanced')
-    b.client.send({ type: 'fire', q: 9, r: 0 })
+    b.client.send({ type: 'fire', ...OPEN_WATER })
     await a.client.until('turnAdvanced')
-    a.client.send({ type: 'fire', q: -1, r: 10 })
+    a.client.send({ type: 'fire', ...FOE.tug[1]! })
     const shot = await a.client.until('shotFired')
     expect(shot.sunk).toEqual([{ seat: 1, shipId: 'tug' }])
   })
 
   it('refuses a shot out of turn', async () => {
     const { b } = await battle('TIDE-06')
-    b.client.send({ type: 'fire', q: 9, r: 0 })
+    b.client.send({ type: 'fire', ...OPEN_WATER })
     const err = await b.client.until('error')
     expect(err.code).toBe('notYourTurn')
   })
 
   it('refuses a hex that has already been shot', async () => {
     const { a, b } = await battle('TIDE-07')
-    a.client.send({ type: 'fire', q: 9, r: 0 })
+    a.client.send({ type: 'fire', ...OPEN_WATER })
     await a.client.until('turnAdvanced')
-    b.client.send({ type: 'fire', q: 9, r: 0 })
+    b.client.send({ type: 'fire', ...OPEN_WATER })
     const err = await b.client.until('error')
     expect(err.code).toBe('alreadyShot')
   })
@@ -100,11 +108,11 @@ describe('game over', () => {
   it('ends when only one fleet is left afloat', async () => {
     // Seat 1 gets a tiny corner fleet that seat 0 can sink hex by hex.
     const tiny: Fleet = {
-      carrier: cellsFor({ q: 0, r: -10 }, 0, 5),
-      cutter: cellsFor({ q: 0, r: -9 }, 0, 4),
-      trawler: cellsFor({ q: 0, r: -8 }, 0, 3),
-      skiff: cellsFor({ q: 0, r: -7 }, 0, 3),
-      tug: cellsFor({ q: 0, r: -6 }, 0, 2),
+      carrier: cellsFor({ q: 0, r: -8 }, 0, 5),
+      cutter: cellsFor({ q: 0, r: -7 }, 0, 4),
+      trawler: cellsFor({ q: 0, r: -6 }, 0, 3),
+      skiff: cellsFor({ q: 0, r: -5 }, 0, 3),
+      tug: cellsFor({ q: 0, r: -4 }, 0, 2),
     }
     const fleets: [Fleet, Fleet] = [legalFleet(0), tiny]
     const { a, b } = await battle('TIDE-10', fleets)
@@ -115,7 +123,7 @@ describe('game over', () => {
     // `{ q: 9 - (filler % 3), r: filler++ }` computation drifts off the
     // hexagon by the third shot, which the server correctly rejects with
     // `offBoard`, stalling the turn forever).
-    const filler = openCells(10, ...fleets)
+    const filler = openCells(BOARD_RADIUS, ...fleets)
     let fillerIdx = 0
     // Two fixes over the brief's original loop, both needed to make it
     // terminate:
@@ -154,16 +162,16 @@ describe('game over', () => {
 
   it('stops accepting shots after the game ends', async () => {
     const tiny: Fleet = {
-      carrier: cellsFor({ q: 0, r: -10 }, 0, 5),
-      cutter: cellsFor({ q: 0, r: -9 }, 0, 4),
-      trawler: cellsFor({ q: 0, r: -8 }, 0, 3),
-      skiff: cellsFor({ q: 0, r: -7 }, 0, 3),
-      tug: cellsFor({ q: 0, r: -6 }, 0, 2),
+      carrier: cellsFor({ q: 0, r: -8 }, 0, 5),
+      cutter: cellsFor({ q: 0, r: -7 }, 0, 4),
+      trawler: cellsFor({ q: 0, r: -6 }, 0, 3),
+      skiff: cellsFor({ q: 0, r: -5 }, 0, 3),
+      tug: cellsFor({ q: 0, r: -4 }, 0, 2),
     }
     const fleets: [Fleet, Fleet] = [legalFleet(0), tiny]
     const { a, b } = await battle('TIDE-11', fleets)
     const targets = Object.values(tiny).flat()
-    const filler = openCells(10, ...fleets)
+    const filler = openCells(BOARD_RADIUS, ...fleets)
     let fillerIdx = 0
     let ended = false
     // Same two fixes as the test above: read everything through `a.client`,
@@ -196,11 +204,11 @@ describe('game over', () => {
 describe('shot map', () => {
   it('shows up in a resynced snapshot', async () => {
     const { a } = await battle('TIDE-12')
-    a.client.send({ type: 'fire', q: 9, r: 0 })
+    a.client.send({ type: 'fire', ...OPEN_WATER })
     await a.client.until('turnAdvanced')
     a.client.send({ type: 'resync' })
     const snap = await a.client.until('snapshot')
-    expect(snap.shots[key(9, 0)]).toEqual({ by: 0, hits: [] })
+    expect(snap.shots[key(OPEN_WATER.q, OPEN_WATER.r)]).toEqual({ by: 0, hits: [] })
   })
 })
 
@@ -209,7 +217,7 @@ describe('secrecy', () => {
     const { a, b } = await battle('TIDE-13')
     // Seat 1's cutter (len 4) sits at (-2,7)..(1,7). One shot leaves it
     // struck but not sunk.
-    a.client.send({ type: 'fire', q: -2, r: 7 })
+    a.client.send({ type: 'fire', ...FOE.cutter[0]! })
     await a.client.until('shotFired')
     await a.client.until('turnAdvanced')
 

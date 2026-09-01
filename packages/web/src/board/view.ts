@@ -42,7 +42,7 @@ export type BoardInput = {
 }
 
 // `boardCells` + `layout` recompute the full trig layout for every cell
-// (up to 331 of them) on every call. The board's geometry depends only on
+// (a couple of hundred of them) on every call. The board's geometry depends only on
 // `radius`, which never changes for the life of a table, so a hover-driven
 // re-render (every mouse move) would otherwise redo that work for nothing.
 // Cache it per radius instead of restructuring `buildBoard`'s signature.

@@ -139,6 +139,13 @@ export class TableDO {
     const s = this.state.seats.find((x) => x.seat === seat)!
     s.ready = true
     await this.emit({ type: 'seatReady', seat })
+    // `seatReady` reaches every captain, so it deliberately carries no fleet.
+    // That would leave the owner's own `myFleet` stale -- null, if they joined
+    // without one -- and the waiting and battle boards read `myFleet` rather
+    // than local placement, so the captain would watch the battle with their
+    // own sea empty. Unicast a fresh snapshot to the owner alone;
+    // `snapshotFor` redacts per seat, so this leaks nothing.
+    await this.sendSnapshot(ws, seat)
   }
 
   protected async onUnlockFleet(ws: WebSocket, seat: number): Promise<void> {

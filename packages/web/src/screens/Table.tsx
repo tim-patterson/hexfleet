@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { MIN_SEATS, SHIPS } from '@hexfleet/shared'
+import { BOARD_RADIUS, MIN_SEATS, SHIPS } from '@hexfleet/shared'
 import type { Fleet } from '@hexfleet/shared'
 import { useTable } from '../net/useTable.js'
 import { useDeployment } from '../board/useDeployment.js'
@@ -18,7 +18,7 @@ import { ACCENT, ACCENT_DEEP, ACCENT_PALE, BG, FAINT, GREEN, GREEN_DARK, GREEN_T
 export function Table({ code, name, onLeave }: { code: string; name: string; onLeave: () => void }) {
   const table = useTable(code, name)
   const snap = table.snapshot
-  const radius = snap?.boardRadius ?? 10
+  const radius = snap?.boardRadius ?? BOARD_RADIUS
   const deploy = useDeployment(radius)
   const [now, setNow] = useState(Date.now())
   const prevShots = useRef(0)

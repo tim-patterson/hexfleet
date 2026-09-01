@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_SEATS, PALETTE } from '@hexfleet/shared'
+import { BOARD_RADIUS, MAX_SEATS, PALETTE } from '@hexfleet/shared'
 import { connect, join } from './helpers.js'
 
 describe('hello', () => {
@@ -7,7 +7,7 @@ describe('hello', () => {
     const { seat, snapshot, token } = await join('REEF-01', 'Ada')
     expect(seat).toBe(0)
     expect(token).toMatch(/^[A-Za-z0-9_-]{20,}$/)
-    expect(snapshot).toMatchObject({ phase: 'lobby', hostSeat: 0, mySeat: 0, boardRadius: 10 })
+    expect(snapshot).toMatchObject({ phase: 'lobby', hostSeat: 0, mySeat: 0, boardRadius: BOARD_RADIUS })
     expect(snapshot.seats).toHaveLength(1)
     expect(snapshot.seats[0]).toMatchObject({ seat: 0, name: 'Ada', color: PALETTE[0], ready: false })
   })
